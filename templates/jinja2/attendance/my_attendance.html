@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}My Attendance{% endblock %}
+{% block page_title %}My Attendance{% endblock %}
+{% block extra_css %}
+<style>
+  .clock-display { font-size: 2.5rem; font-weight: 700; letter-spacing: 2px; }
+  .clock-date { font-size: 0.95rem; color: #6c757d; }
+  .checkin-card { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); }
+</style>
+{% endblock %}
+{% block content %}
+
+
+<!-- Check In / Check Out Card -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm checkin-card h-100">
+      <div class="card-body text-center py-4">
+        <div class="clock-display text-primary" id="live-clock">--:--:--</div>
+        <div class="clock-date mb-4" id="live-date"></div>
+
+        {% if today_record %}
+          <div class="mb-3">
+            <span class="badge bg-success fs-6 px-3 py-2"><i class="bi bi-check-circle me-1"></i>{{ today_record.status }}</span>
+          </div>
+          <div class="row text-center mb-3">
+            <div class="col-6">
+              <div class="text-muted small">Check In</div>
+              <div class="fw-bold fs-4 text-success">{{ today_record.check_in.strftime('%I:%M %p') if today_record.check_in else '—' }}</div>
+            </div>
+            <div class="col-6">
+              <div class="text-muted small">Check Out</div>
+              <div class="fw-bold fs-4 {{ 'text-warning' if today_record.check_out else 'text-muted' }}">{{ today_record.check_out.strftime('%I:%M %p') if today_record.check_out else '—' }}</div>
+            </div>
+          </div>
+          {% if not today_record.check_out %}
+          <form method="post" action="{{ url('attendance:checkout') }}">
+            {{ csrf_input() }}
+            <button type="submit" class="btn btn-warning btn-lg w-100">
+              <i class="bi bi-box-arrow-right me-2"></i>Check Out
+            </button>
+          </form>
+          {% else %}
+          <div class="alert alert-success mb-0">
+            <i class="bi bi-check-circle me-1"></i>Your day is complete!
+          </div>
+          {% endif %}
+        {% else %}
+          <div class="mb-3">
+            <span class="badge bg-secondary fs-6 px-3 py-2"><i class="bi bi-circle me-1"></i>Not Checked In</span>
+          </div>
+          <form method="post" action="{{ url('attendance:checkin') }}">
+            {{ csrf_input() }}
+            <button type="submit" class="btn btn-success btn-lg w-100">
+              <i class="bi bi-box-arrow-in-right me-2"></i>Check In Now
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-calendar-check me-2"></i>Quick Actions</span>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-sm-4">
+            <a href="{{ url('attendance:apply_leave') }}" class="card border text-decoration-none h-100">
+              <div class="card-body text-center py-3">
+                <i class="bi bi-calendar-plus fs-2 text-warning"></i>
+                <div class="fw-semibold small mt-1">Apply Leave</div>
+              </div>
+            </a>
+          </div>
+          <div class="col-sm-4">
+            <a href="{{ url('payroll:my_payslips') }}" class="card border text-decoration-none h-100">
+              <div class="card-body text-center py-3">
+                <i class="bi bi-receipt fs-2 text-primary"></i>
+                <div class="fw-semibold small mt-1">My Payslips</div>
+              </div>
+            </a>
+          </div>
+          <div class="col-sm-4">
+            <a href="{{ url('dashboard:index') }}" class="card border text-decoration-none h-100">
+              <div class="card-body text-center py-3">
+                <i class="bi bi-speedometer2 fs-2 text-info"></i>
+                <div class="fw-semibold small mt-1">Dashboard</div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Attendance History -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white fw-semibold">
+    <i class="bi bi-clock-history me-2"></i>Attendance History
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light"><tr><th>Date</th><th>Check In</th><th>Check Out</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        {% for r in records %}
+        <tr>
+          <td>{{ r.date|date_fmt }}</td>
+          <td>{{ r.check_in.strftime('%I:%M %p') if r.check_in else '—' }}</td>
+          <td>{{ r.check_out.strftime('%I:%M %p') if r.check_out else '—' }}</td>
+          <td>{{ r.status|status_badge|safe }}</td>
+          <td class="small text-muted">{{ r.notes or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted">No attendance records found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateClock() {
+  const now = new Date();
+  const time = now.toLocaleTimeString('en-US', {hour12:true, hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  const date = now.toLocaleDateString('en-US', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  const c = document.getElementById('live-clock');
+  const d = document.getElementById('live-date');
+  if (c) c.textContent = time;
+  if (d) d.textContent = date;
+}
+updateClock();
+setInterval(updateClock, 1000);
+</script>
+{% endblock %}

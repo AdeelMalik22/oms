@@ -1,0 +1,32 @@
+{% extends "base_auth.html" %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<form method="post">
+    {{ csrf_input() }}
+    <div class="mb-3">
+        <label class="form-label fw-semibold"><i class="bi bi-person me-1"></i>Username</label>
+        {{ form.username }}
+        {% if form.username.errors %}
+        <div class="text-danger small">{{ form.username.errors|join(', ') }}</div>
+        {% endif %}
+    </div>
+    <div class="mb-3">
+        <label class="form-label fw-semibold"><i class="bi bi-lock me-1"></i>Password</label>
+        {{ form.password }}
+        {% if form.password.errors %}
+        <div class="text-danger small">{{ form.password.errors|join(', ') }}</div>
+        {% endif %}
+    </div>
+    <div class="form-check mb-4">
+        <input class="form-check-input" type="checkbox" id="remember">
+        <label class="form-check-label small" for="remember">Remember me</label>
+    </div>
+    <button type="submit" class="btn btn-primary w-100 fw-semibold py-2">
+        <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+    </button>
+</form>
+<div class="text-center mt-3">
+    <small class="text-muted">Office Management System v1.0</small>
+</div>
+{% endblock %}
+

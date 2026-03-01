@@ -1,0 +1,771 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block extra_css %}
+<style>
+  .stat-card { transition: transform 0.2s; }
+  .stat-card:hover { transform: translateY(-3px); }
+  .clock-display { font-size: 2.5rem; font-weight: 700; letter-spacing: 2px; }
+  .clock-date { font-size: 0.95rem; color: #6c757d; }
+  .quick-action { transition: all 0.2s; border: 2px solid transparent; cursor: pointer; }
+  .quick-action:hover { border-color: #0d6efd; transform: translateY(-2px); }
+  .week-bar { width: 100%; border-radius: 4px 4px 0 0; min-height: 4px; transition: height 0.4s; }
+  .leave-bal-item { border-left: 4px solid #0d6efd; }
+</style>
+{% endblock %}
+{% block content %}
+
+
+{# ═══════════════════════════════════════════════════════════════ #}
+{#                    ADMIN / HR DASHBOARD                        #}
+{# ═══════════════════════════════════════════════════════════════ #}
+{% if request.user.is_admin or request.user.is_hr %}
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm stat-card text-white bg-primary">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div><div class="small opacity-75">Total Employees</div><div class="fs-3 fw-bold">{{ total_employees }}</div></div>
+        <i class="bi bi-people fs-1 opacity-50"></i>
+      </div>
+      <div class="card-footer bg-transparent border-0 pt-0">
+        <a href="{{ url('employees:list') }}" class="text-white small text-decoration-none">View all <i class="bi bi-arrow-right"></i></a>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm stat-card text-white bg-success">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div><div class="small opacity-75">Present Today</div><div class="fs-3 fw-bold">{{ present_today }}</div></div>
+        <i class="bi bi-calendar-check fs-1 opacity-50"></i>
+      </div>
+      <div class="card-footer bg-transparent border-0 pt-0">
+        <a href="{{ url('attendance:list') }}" class="text-white small text-decoration-none">View attendance <i class="bi bi-arrow-right"></i></a>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm stat-card text-white bg-warning">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div><div class="small opacity-75">Pending Leaves</div><div class="fs-3 fw-bold">{{ pending_leaves }}</div></div>
+        <i class="bi bi-calendar-x fs-1 opacity-50"></i>
+      </div>
+      <div class="card-footer bg-transparent border-0 pt-0">
+        <a href="{{ url('attendance:leaves') }}" class="text-white small text-decoration-none">Review requests <i class="bi bi-arrow-right"></i></a>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm stat-card text-white bg-info">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div><div class="small opacity-75">Active Projects</div><div class="fs-3 fw-bold">{{ active_projects }}</div></div>
+        <i class="bi bi-kanban fs-1 opacity-50"></i>
+      </div>
+      <div class="card-footer bg-transparent border-0 pt-0">
+        <a href="{{ url('projects:list') }}" class="text-white small text-decoration-none">View projects <i class="bi bi-arrow-right"></i></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Second Row: Absent + Overdue + Attendance Rate -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm stat-card">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div><div class="small text-muted">Absent Today</div><div class="fs-4 fw-bold text-danger">{{ absent_today }}</div></div>
+        <i class="bi bi-person-x fs-2 text-danger opacity-50"></i>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm stat-card">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div><div class="small text-muted">Overdue Tasks</div><div class="fs-4 fw-bold text-warning">{{ overdue_tasks }}</div></div>
+        <i class="bi bi-exclamation-triangle fs-2 text-warning opacity-50"></i>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-6">
+        <div class="card border-0 shadow-sm stat-card">
+          <div class="card-body">
+            <div class="small text-muted mb-1">Attendance Rate Today</div>
+            {% set rate = ((present_today / total_employees) * 100)|int if total_employees > 0 else 0 %}
+            <div class="d-flex align-items-center gap-3">
+              <div class="fs-4 fw-bold text-primary">{{ rate }}%</div>
+              <div class="progress flex-grow-1" style="height:10px">
+                <div class="progress-bar bg-success" style="width:{{ rate }}%"></div>
+                <div class="progress-bar bg-danger" style="width:{{ 100 - rate }}%"></div>
+              </div>
+            </div>
+            <div class="small text-muted mt-1">{{ present_today }} present / {{ absent_today }} absent of {{ total_employees }} total</div>
+          </div>
+        </div>
+  </div>
+</div>
+
+<!-- Quick Actions (Admin/HR) -->
+<div class="mb-2"><h6 class="fw-semibold text-muted"><i class="bi bi-lightning me-1"></i>Quick Actions</h6></div>
+<div class="row g-3 mb-4">
+  <div class="col-6 col-sm-4 col-md-2">
+    <a href="{{ url('employees:add') }}" class="card border-0 shadow-sm quick-action text-decoration-none h-100">
+      <div class="card-body text-center py-3 px-2">
+        <i class="bi bi-person-plus fs-2 text-primary"></i>
+        <div class="fw-semibold small mt-2">Add Employee</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-sm-4 col-md-2">
+    <a href="{{ url('announcements:add') }}" class="card border-0 shadow-sm quick-action text-decoration-none h-100">
+      <div class="card-body text-center py-3 px-2">
+        <i class="bi bi-megaphone fs-2 text-warning"></i>
+        <div class="fw-semibold small mt-2">Post Announcement</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-sm-4 col-md-2">
+    <a href="{{ url('payroll:generate') }}" class="card border-0 shadow-sm quick-action text-decoration-none h-100">
+      <div class="card-body text-center py-3 px-2">
+        <i class="bi bi-calculator fs-2 text-success"></i>
+        <div class="fw-semibold small mt-2">Generate Payroll</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-sm-4 col-md-2">
+    <a href="{{ url('projects:add') }}" class="card border-0 shadow-sm quick-action text-decoration-none h-100">
+      <div class="card-body text-center py-3 px-2">
+        <i class="bi bi-folder-plus fs-2 text-info"></i>
+        <div class="fw-semibold small mt-2">New Project</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-sm-4 col-md-2">
+    <a href="{{ url('attendance:leaves') }}" class="card border-0 shadow-sm quick-action text-decoration-none h-100">
+      <div class="card-body text-center py-3 px-2">
+        <i class="bi bi-calendar-x fs-2 text-danger"></i>
+        <div class="fw-semibold small mt-2">Leave Requests</div>
+        {% if pending_leaves > 0 %}<span class="badge bg-danger rounded-pill mt-1">{{ pending_leaves }}</span>{% endif %}
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-sm-4 col-md-2">
+    <a href="{{ url('attendance:list') }}" class="card border-0 shadow-sm quick-action text-decoration-none h-100">
+      <div class="card-body text-center py-3 px-2">
+        <i class="bi bi-calendar-check fs-2 text-secondary"></i>
+        <div class="fw-semibold small mt-2">Attendance</div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Admin/HR own Check-in (if they have an employee profile) -->
+{% if my_attendance is defined %}
+<div class="alert alert-light border shadow-sm d-flex flex-wrap align-items-center gap-3 mb-4">
+  <div><i class="bi bi-person-badge me-1 text-primary"></i><strong>Your attendance today:</strong></div>
+  {% if my_attendance %}
+    <span class="badge bg-success">Checked In {{ my_attendance.check_in.strftime('%I:%M %p') if my_attendance.check_in else '' }}</span>
+    {% if my_attendance.check_out %}
+      <span class="badge bg-secondary">Checked Out {{ my_attendance.check_out.strftime('%I:%M %p') }}</span>
+    {% else %}
+      <form method="post" action="{{ url('attendance:checkout') }}" class="mb-0">
+        {{ csrf_input() }}
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <button class="btn btn-sm btn-warning"><i class="bi bi-box-arrow-right me-1"></i>Check Out</button>
+      </form>
+    {% endif %}
+  {% else %}
+    <span class="badge bg-secondary">Not checked in yet</span>
+    <form method="post" action="{{ url('attendance:checkin') }}" class="mb-0">
+      {{ csrf_input() }}
+      <input type="hidden" name="next" value="{{ request.path }}">
+      <button class="btn btn-sm btn-success"><i class="bi bi-box-arrow-in-right me-1"></i>Check In Now</button>
+    </form>
+  {% endif %}
+  <a href="{{ url('attendance:my') }}" class="btn btn-sm btn-outline-primary ms-auto">My Attendance <i class="bi bi-arrow-right"></i></a>
+</div>
+{% endif %}
+
+<!-- Recent Attendance & Pending Leaves Tables -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history me-2"></i>Today's Attendance</span>
+        <a href="{{ url('attendance:list') }}" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light"><tr><th>Employee</th><th>In</th><th>Out</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for r in recent_attendance %}
+            <tr>
+              <td class="small">{{ r.employee.full_name }}</td>
+              <td class="small">{{ r.check_in.strftime('%H:%M') if r.check_in else '—' }}</td>
+              <td class="small">{{ r.check_out.strftime('%H:%M') if r.check_out else '—' }}</td>
+              <td>{{ r.status|status_badge|safe }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted small py-3">No records today.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-calendar-x me-2"></i>Pending Leave Requests
+          {% if pending_leaves > 0 %}<span class="badge bg-danger ms-1">{{ pending_leaves }}</span>{% endif %}
+        </span>
+        <a href="{{ url('attendance:leaves') }}" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light"><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th>Action</th></tr></thead>
+          <tbody>
+            {% for leave in recent_leaves %}
+            <tr>
+              <td class="small">{{ leave.employee.full_name }}</td>
+              <td class="small">{{ leave.leave_type }}</td>
+              <td class="small">{{ leave.start_date|date_fmt }}</td>
+              <td class="small">{{ leave.end_date|date_fmt }}</td>
+              <td>
+                <div class="d-flex gap-1">
+                  <form method="post" action="{{ url('attendance:approve_leave', pk=leave.pk) }}" class="d-inline">
+                    {{ csrf_input() }}<button class="btn btn-success btn-sm py-0 px-2" title="Approve">✓</button>
+                  </form>
+                  <form method="post" action="{{ url('attendance:reject_leave', pk=leave.pk) }}" class="d-inline">
+                    {{ csrf_input() }}<button class="btn btn-danger btn-sm py-0 px-2" title="Reject">✗</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="text-center text-muted small py-3">No pending requests. 🎉</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endif %}{# /admin-hr #}
+
+{# ═══════════════════════════════════════════════════════════════ #}
+{#                     MANAGER DASHBOARD                          #}
+{# ═══════════════════════════════════════════════════════════════ #}
+{% if request.user.is_manager %}
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-4">
+    <div class="card border-0 shadow-sm stat-card text-white bg-primary">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div><div class="small opacity-75">My Projects</div><div class="fs-3 fw-bold">{{ my_projects|length if my_projects else 0 }}</div></div>
+        <i class="bi bi-kanban fs-1 opacity-50"></i>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-4">
+    <div class="card border-0 shadow-sm stat-card text-white bg-warning">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div><div class="small opacity-75">Overdue Tasks</div><div class="fs-3 fw-bold">{{ overdue_tasks }}</div></div>
+        <i class="bi bi-exclamation-triangle fs-1 opacity-50"></i>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-4">
+    <div class="card border-0 shadow-sm stat-card">
+      <div class="card-body text-center py-4">
+        <div class="clock-display" id="manager-clock">--:--:--</div>
+        <div class="clock-date" id="manager-date"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Manager's own check-in widget -->
+{% if my_attendance is defined %}
+<div class="alert alert-light border shadow-sm d-flex flex-wrap align-items-center gap-3 mb-4">
+  <div><i class="bi bi-person-badge me-1 text-primary"></i><strong>Your attendance today:</strong></div>
+  {% if my_attendance %}
+    <span class="badge bg-success">Checked In {{ my_attendance.check_in.strftime('%I:%M %p') if my_attendance.check_in else '' }}</span>
+    {% if my_attendance.check_out %}
+      <span class="badge bg-secondary">Checked Out {{ my_attendance.check_out.strftime('%I:%M %p') }}</span>
+    {% else %}
+      <form method="post" action="{{ url('attendance:checkout') }}" class="mb-0">
+        {{ csrf_input() }}
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <button class="btn btn-sm btn-warning"><i class="bi bi-box-arrow-right me-1"></i>Check Out</button>
+      </form>
+    {% endif %}
+  {% else %}
+    <form method="post" action="{{ url('attendance:checkin') }}" class="mb-0">
+      {{ csrf_input() }}
+      <input type="hidden" name="next" value="{{ request.path }}">
+      <button class="btn btn-sm btn-success"><i class="bi bi-box-arrow-in-right me-1"></i>Check In Now</button>
+    </form>
+  {% endif %}
+  <a href="{{ url('attendance:my') }}" class="btn btn-sm btn-outline-primary ms-auto">My Attendance <i class="bi bi-arrow-right"></i></a>
+</div>
+{% endif %}
+
+{% if my_projects %}
+<div class="row g-3 mb-4">
+  {% for project in my_projects %}
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h6 class="fw-bold mb-0"><a href="{{ url('projects:detail', pk=project.pk) }}" class="text-decoration-none">{{ project.name }}</a></h6>
+          {{ project.status|status_badge|safe }}
+        </div>
+        <div class="mb-2">
+          <div class="d-flex justify-content-between small text-muted mb-1"><span>Progress</span><span>{{ project.progress }}%</span></div>
+          <div class="progress" style="height:6px"><div class="progress-bar bg-primary" style="width:{{ project.progress }}%"></div></div>
+        </div>
+        <div class="small text-muted"><i class="bi bi-list-task me-1"></i>{{ project.tasks.count() }} tasks</div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Team Leave Requests for Manager -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+    <span>
+      <i class="bi bi-calendar-x me-2"></i>Team Leave Requests
+      {% if team_pending_leaves %}
+      <span class="badge bg-danger ms-1">{{ team_pending_leaves|length }}</span>
+      {% endif %}
+    </span>
+    <a href="{{ url('attendance:leaves') }}" class="btn btn-sm btn-outline-primary">View All</a>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr><th>Employee</th><th>Leave Type</th><th>From</th><th>To</th><th>Reason</th><th>Status</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for leave in team_pending_leaves %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width:28px;height:28px;font-size:0.7rem;flex-shrink:0;">
+                {{ leave.employee.full_name[0]|upper }}
+              </div>
+              <span class="small fw-semibold">{{ leave.employee.full_name }}</span>
+            </div>
+          </td>
+          <td class="small">{{ leave.leave_type }}</td>
+          <td class="small">{{ leave.start_date|date_fmt }}</td>
+          <td class="small">{{ leave.end_date|date_fmt }}</td>
+          <td class="small text-muted">{{ leave.reason[:40] if leave.reason else '—' }}</td>
+          <td>{{ leave.status|status_badge|safe }}</td>
+          <td>
+            {% if leave.status == 'Pending' %}
+            <div class="d-flex gap-1">
+              <form method="post" action="{{ url('attendance:approve_leave', pk=leave.pk) }}" class="d-inline">
+                {{ csrf_input() }}
+                <button class="btn btn-success btn-sm py-0 px-2" title="Approve">✓</button>
+              </form>
+              <form method="post" action="{{ url('attendance:reject_leave', pk=leave.pk) }}" class="d-inline">
+                {{ csrf_input() }}
+                <button class="btn btn-danger btn-sm py-0 px-2" title="Reject">✗</button>
+              </form>
+            </div>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="text-center text-muted small py-3">
+            <i class="bi bi-check-circle text-success me-1"></i>No pending leave requests from your team.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endif %}{# /manager #}
+
+{# ═══════════════════════════════════════════════════════════════ #}
+{#                     EMPLOYEE DASHBOARD                         #}
+{# ═══════════════════════════════════════════════════════════════ #}
+{% if request.user.is_employee %}
+
+<!-- Top Row: Clock + Check-in / Stats -->
+<div class="row g-3 mb-4">
+
+  <!-- Check In / Check Out Widget -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center d-flex flex-column justify-content-center py-4">
+        <div class="clock-display text-primary" id="live-clock">--:--:--</div>
+        <div class="clock-date mb-3" id="live-date"></div>
+
+        {% if my_attendance %}
+          <div class="mb-2">
+            <span class="badge bg-success fs-6 px-3 py-2"><i class="bi bi-check-circle me-1"></i>Checked In</span>
+          </div>
+          <div class="row text-center mb-3">
+            <div class="col-6">
+              <div class="text-muted small">Check In</div>
+              <div class="fw-bold fs-5 text-success">{{ my_attendance.check_in.strftime('%I:%M %p') if my_attendance.check_in else '—' }}</div>
+            </div>
+            <div class="col-6">
+              <div class="text-muted small">Check Out</div>
+              <div class="fw-bold fs-5 {{ 'text-warning' if my_attendance.check_out else 'text-muted' }}">
+                {{ my_attendance.check_out.strftime('%I:%M %p') if my_attendance.check_out else '—' }}
+              </div>
+            </div>
+          </div>
+          {% if not my_attendance.check_out %}
+          <form method="post" action="{{ url('attendance:checkout') }}">
+            {{ csrf_input() }}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button type="submit" class="btn btn-warning btn-lg w-100">
+              <i class="bi bi-box-arrow-right me-2"></i>Check Out
+            </button>
+          </form>
+          {% else %}
+          <div class="alert alert-success mb-0 py-2">
+            <i class="bi bi-check-circle me-1"></i>Day complete! See you tomorrow.
+          </div>
+          {% endif %}
+        {% else %}
+          <div class="mb-3">
+            <span class="badge bg-secondary fs-6 px-3 py-2"><i class="bi bi-circle me-1"></i>Not Checked In</span>
+          </div>
+          <form method="post" action="{{ url('attendance:checkin') }}">
+            {{ csrf_input() }}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button type="submit" class="btn btn-success btn-lg w-100">
+              <i class="bi bi-box-arrow-in-right me-2"></i>Check In Now
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats: Days in Company + Month Present + Week Present -->
+  <div class="col-lg-8">
+    <div class="row g-3">
+      <div class="col-sm-4">
+        <div class="card border-0 shadow-sm h-100 stat-card">
+          <div class="card-body d-flex flex-column justify-content-center align-items-center text-center py-4">
+            <i class="bi bi-building fs-2 text-primary opacity-75 mb-2"></i>
+            {% if days_in_company is defined and days_in_company is not none %}
+            <div class="fs-2 fw-bold text-primary">{{ days_in_company }}</div>
+            <div class="small text-muted">Days in Company</div>
+            {% if hire_date %}<div class="small text-muted mt-1">Since {{ hire_date.strftime('%b %d, %Y') }}</div>{% endif %}
+            {% else %}
+            <div class="fs-2 fw-bold text-muted">—</div>
+            <div class="small text-muted">Days in Company</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="card border-0 shadow-sm h-100 stat-card">
+          <div class="card-body d-flex flex-column justify-content-center align-items-center text-center py-4">
+            <i class="bi bi-calendar-check fs-2 text-success opacity-75 mb-2"></i>
+            <div class="fs-2 fw-bold text-success">{{ my_month_attendance }}</div>
+            <div class="small text-muted">Days Present</div>
+            <div class="small text-muted mt-1">This Month</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="card border-0 shadow-sm h-100 stat-card">
+          <div class="card-body d-flex flex-column justify-content-center align-items-center text-center py-4">
+            <i class="bi bi-calendar-week fs-2 text-info opacity-75 mb-2"></i>
+            <div class="fs-2 fw-bold text-info">{{ week_present if week_present is defined else 0 }}</div>
+            <div class="small text-muted">Days Present</div>
+            <div class="small text-muted mt-1">This Week</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Weekly Timetable Bar -->
+{% if week_attendance %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-bar-chart-line me-2"></i>This Week's Attendance</span>
+    <a href="{{ url('attendance:my') }}" class="btn btn-sm btn-outline-primary">Full History</a>
+  </div>
+  <div class="card-body">
+    <div class="d-flex align-items-end gap-2" style="height:130px;">
+      {% for day in week_attendance %}
+      {% set bar_h = ((day.hours / 9) * 85)|int if day.hours > 0 else 4 %}
+      {% set bar_h = [bar_h, 85]|min %}
+      <div class="flex-fill d-flex flex-column align-items-center justify-content-end h-100">
+        <div class="small fw-bold mb-1" style="font-size:.65rem; min-height:14px;">
+          {% if not day.is_future and day.hours > 0 %}{{ day.hours }}h{% endif %}
+        </div>
+        <div class="w-100 rounded-top"
+          style="height:{{ bar_h if not day.is_future else 4 }}px;
+                 background: {% if day.is_future %}#dee2e6{% elif day.status == 'Present' %}#198754{% elif day.status == 'Late' %}#ffc107{% elif day.status == 'Absent' %}#dc3545{% elif day.status == 'Half-Day' %}#0dcaf0{% else %}#dee2e6{% endif %};
+                 {% if day.is_today %}outline: 2px solid #0d6efd; outline-offset: 1px;{% endif %}">
+        </div>
+        <div class="mt-1 text-center">
+          {% if day.is_future %}
+            <span style="font-size:.6rem; color:#aaa;">—</span>
+          {% elif day.status == 'Present' %}
+            <span class="badge bg-success" style="font-size:.5rem; padding:2px 4px;">✓</span>
+          {% elif day.status == 'Late' %}
+            <span class="badge bg-warning text-dark" style="font-size:.5rem; padding:2px 4px;">Late</span>
+          {% elif day.status == 'Absent' %}
+            <span class="badge bg-danger" style="font-size:.5rem; padding:2px 4px;">✗</span>
+          {% elif day.status == 'Half-Day' %}
+            <span class="badge bg-info" style="font-size:.5rem; padding:2px 4px;">½</span>
+          {% else %}
+            <span style="font-size:.6rem;color:#aaa;">—</span>
+          {% endif %}
+        </div>
+        <div class="small mt-1 {{ 'fw-bold text-primary' if day.is_today else 'text-muted' }}" style="font-size:.7rem;">{{ day.label }}</div>
+        <div style="font-size:.6rem;color:#aaa;">{{ day.date }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="d-flex gap-3 mt-3 flex-wrap">
+      <span class="d-flex align-items-center gap-1 small"><span style="width:12px;height:12px;background:#198754;border-radius:2px;display:inline-block;"></span>Present</span>
+      <span class="d-flex align-items-center gap-1 small"><span style="width:12px;height:12px;background:#ffc107;border-radius:2px;display:inline-block;"></span>Late</span>
+      <span class="d-flex align-items-center gap-1 small"><span style="width:12px;height:12px;background:#dc3545;border-radius:2px;display:inline-block;"></span>Absent</span>
+      <span class="d-flex align-items-center gap-1 small"><span style="width:12px;height:12px;background:#dee2e6;border-radius:2px;display:inline-block;"></span>No Data / Future</span>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Employee Quick Actions -->
+<div class="mb-2"><h6 class="fw-semibold text-muted"><i class="bi bi-lightning me-1"></i>Quick Actions</h6></div>
+<div class="row g-3 mb-4">
+  <div class="col-6 col-sm-4 col-md-2">
+    <a href="{{ url('attendance:apply_leave') }}" class="card border-0 shadow-sm quick-action text-decoration-none h-100">
+      <div class="card-body text-center py-3 px-2">
+        <i class="bi bi-calendar-plus fs-2 text-warning"></i>
+        <div class="fw-semibold small mt-2">Apply Leave</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-sm-4 col-md-2">
+    <a href="{{ url('attendance:my') }}" class="card border-0 shadow-sm quick-action text-decoration-none h-100">
+      <div class="card-body text-center py-3 px-2">
+        <i class="bi bi-calendar-check fs-2 text-success"></i>
+        <div class="fw-semibold small mt-2">My Attendance</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-sm-4 col-md-2">
+    <a href="{{ url('payroll:my_payslips') }}" class="card border-0 shadow-sm quick-action text-decoration-none h-100">
+      <div class="card-body text-center py-3 px-2">
+        <i class="bi bi-receipt fs-2 text-primary"></i>
+        <div class="fw-semibold small mt-2">My Payslips</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-sm-4 col-md-2">
+    <a href="{{ url('announcements:list') }}" class="card border-0 shadow-sm quick-action text-decoration-none h-100">
+      <div class="card-body text-center py-3 px-2">
+        <i class="bi bi-megaphone fs-2 text-info"></i>
+        <div class="fw-semibold small mt-2">Announcements</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-sm-4 col-md-2">
+    <a href="{{ url('documents:list') }}" class="card border-0 shadow-sm quick-action text-decoration-none h-100">
+      <div class="card-body text-center py-3 px-2">
+        <i class="bi bi-folder fs-2 text-secondary"></i>
+        <div class="fw-semibold small mt-2">Documents</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-sm-4 col-md-2">
+    <a href="{{ url('notifications:list') }}" class="card border-0 shadow-sm quick-action text-decoration-none h-100">
+      <div class="card-body text-center py-3 px-2">
+        <i class="bi bi-bell fs-2 text-danger"></i>
+        <div class="fw-semibold small mt-2">Notifications</div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Leave Balance + Pending Requests + My Tasks Row -->
+<div class="row g-3 mb-4">
+
+  <!-- Leave Balances -->
+  {% if leave_balances %}
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-calendar-heart me-2"></i>My Leave Balances
+      </div>
+      <div class="card-body">
+        {% for lb in leave_balances %}
+        <div class="leave-bal-item ps-3 mb-3">
+          <div class="fw-semibold small">{{ lb.leave_type.name }}</div>
+          <div class="d-flex align-items-center gap-2 mt-1">
+            <div class="progress flex-grow-1" style="height:8px;">
+              {% set used_pct = ((lb.used_days / lb.total_days) * 100)|int if lb.total_days > 0 else 0 %}
+              <div class="progress-bar bg-primary" style="width:{{ used_pct }}%;"></div>
+            </div>
+            <span class="small text-muted text-nowrap">{{ lb.remaining_days }}/{{ lb.total_days }} left</span>
+          </div>
+        </div>
+        {% endfor %}
+        <a href="{{ url('attendance:apply_leave') }}" class="btn btn-sm btn-outline-warning w-100 mt-1">
+          <i class="bi bi-calendar-plus me-1"></i>Apply for Leave
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- My Leave Requests -->
+  <div class="col-md-{% if leave_balances %}4{% else %}4{% endif %}">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-hourglass-split me-2"></i>My Leave Requests</span>
+        <a href="{{ url('attendance:apply_leave') }}" class="btn btn-sm btn-warning">
+          <i class="bi bi-plus"></i> Apply
+        </a>
+      </div>
+      <div class="card-body p-0">
+        {% if my_pending_leaves %}
+        <table class="table table-sm mb-0">
+          <thead class="table-light"><tr><th>Type</th><th>Dates</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for lr in my_pending_leaves %}
+            <tr>
+              <td class="small">{{ lr.leave_type }}</td>
+              <td class="small">{{ lr.start_date|date_fmt }} – {{ lr.end_date|date_fmt }}</td>
+              <td>{{ lr.status|status_badge|safe }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-center text-muted small py-4">
+          <i class="bi bi-calendar-x fs-3 d-block mb-2 opacity-50"></i>
+          No leave requests yet.
+          <br>
+          <a href="{{ url('attendance:apply_leave') }}" class="btn btn-sm btn-warning mt-2">
+            <i class="bi bi-plus me-1"></i>Apply for Leave
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- My Active Tasks -->
+  <div class="col-md-{% if leave_balances %}4{% else %}8{% endif %}">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list-task me-2"></i>My Active Tasks</span>
+        <span class="badge bg-primary">{{ my_tasks|length if my_tasks else 0 }}</span>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light"><tr><th>Task</th><th>Project</th><th>Priority</th><th>Due</th></tr></thead>
+          <tbody>
+            {% for task in my_tasks %}
+            <tr>
+              <td class="small fw-semibold">{{ task.title }}</td>
+              <td class="small"><a href="{{ url('projects:detail', pk=task.project.pk) }}" class="text-decoration-none">{{ task.project.name }}</a></td>
+              <td>{{ task.priority|status_badge|safe }}</td>
+              <td class="small">{{ task.due_date|date_fmt if task.due_date else '—' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted small py-3">No pending tasks. 🎉</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endif %}{# /employee #}
+
+{# ═══════════════════════════════════════════════════════════════ #}
+{#           PINNED ANNOUNCEMENTS (all roles)                     #}
+{# ═══════════════════════════════════════════════════════════════ #}
+{% if announcements %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-pin-angle me-2"></i>Pinned Announcements</span>
+    <div class="d-flex gap-2">
+      {% if request.user.is_admin or request.user.is_hr %}
+      <a href="{{ url('announcements:add') }}" class="btn btn-sm btn-warning"><i class="bi bi-plus me-1"></i>Post</a>
+      {% endif %}
+      <a href="{{ url('announcements:list') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    {% for a in announcements %}
+    <div class="p-3 border-bottom">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <i class="bi bi-pin-angle-fill text-warning me-1"></i>
+          <span class="fw-semibold">{{ a.title }}</span>
+          {% if a.target_department %}
+          <span class="badge bg-info ms-2">{{ a.target_department }}</span>
+          {% else %}
+          <span class="badge bg-secondary ms-2">Company-wide</span>
+          {% endif %}
+        </div>
+        <small class="text-muted">{{ a.created_at|date_fmt }}</small>
+      </div>
+      <div class="text-muted small mt-1">{{ a.content[:200] }}{% if a.content|length > 200 %}...{% endif %}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+{% if request.user.is_admin or request.user.is_hr %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body text-center py-4">
+    <i class="bi bi-megaphone fs-2 text-muted opacity-50 d-block mb-2"></i>
+    <div class="text-muted small">No pinned announcements yet.</div>
+    <a href="{{ url('announcements:add') }}" class="btn btn-sm btn-warning mt-2"><i class="bi bi-plus me-1"></i>Post Announcement</a>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateClock() {
+  const now = new Date();
+  const time = now.toLocaleTimeString('en-US', {hour12:true, hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  const date = now.toLocaleDateString('en-US', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  ['live-clock','manager-clock'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = time;
+  });
+  ['live-date','manager-date'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = date;
+  });
+}
+updateClock();
+setInterval(updateClock, 1000);
+</script>
+{% endblock %}
+

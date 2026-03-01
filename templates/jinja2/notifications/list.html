@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+{% block content %}
+
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    {% set unread_count = notifications|selectattr('is_read', 'equalto', false)|list|length %}
+    {% if unread_count > 0 %}
+    <span class="badge bg-primary fs-6">{{ unread_count }} unread</span>
+    {% else %}
+    <span class="text-muted small">All caught up!</span>
+    {% endif %}
+  </div>
+  {% if notifications %}
+  <a href="{{ url('notifications:mark_all_read') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-check-all me-1"></i>Mark All Read
+  </a>
+  {% endif %}
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    {% for n in notifications %}
+    <div class="p-3 border-bottom d-flex justify-content-between align-items-start {{ 'bg-light' if not n.is_read else '' }}">
+      <div class="d-flex gap-3">
+        <div class="mt-1 flex-shrink-0">
+          {% if n.type == 'warning' %}
+          <span class="badge bg-warning rounded-circle p-2"><i class="bi bi-exclamation-triangle"></i></span>
+          {% elif n.type == 'alert' %}
+          <span class="badge bg-danger rounded-circle p-2"><i class="bi bi-bell"></i></span>
+          {% else %}
+          <span class="badge bg-info rounded-circle p-2"><i class="bi bi-info-circle"></i></span>
+          {% endif %}
+        </div>
+        <div>
+          <div class="fw-semibold {{ 'text-primary' if not n.is_read else '' }}">
+            {{ n.title }}
+            {% if not n.is_read %}<span class="badge bg-primary ms-1" style="font-size:.6rem;">NEW</span>{% endif %}
+          </div>
+          <div class="text-muted small">{{ n.message }}</div>
+          <div class="text-muted small mt-1"><i class="bi bi-clock me-1"></i>{{ n.created_at|date_fmt }}</div>
+        </div>
+      </div>
+      <div class="d-flex gap-2 flex-shrink-0 ms-3">
+        {% if n.link %}
+        <a href="{{ n.link }}" class="btn btn-sm btn-outline-primary">View</a>
+        {% endif %}
+        {% if not n.is_read %}
+        <a href="{{ url('notifications:mark_read', pk=n.pk) }}" class="btn btn-sm btn-outline-secondary">Mark Read</a>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="p-5 text-center">
+      <i class="bi bi-bell-slash fs-1 text-muted opacity-50 d-block mb-3"></i>
+      <p class="text-muted">No notifications yet.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

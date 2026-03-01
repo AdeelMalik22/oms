@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+
+
+<div class="row g-4">
+  <div class="col-md-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-{{ 'person-plus' if 'Add' in title else 'pencil' }} me-2"></i>{{ title }}
+      </div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          {{ csrf_input() }}
+          <div class="row">
+            {% for field in form %}
+            <div class="col-md-{{ '12' if field.name in ['address'] else '6' }} mb-3">
+              <label class="form-label fw-semibold">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|join(', ') }}</div>{% endif %}
+              {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          <hr>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Employee</button>
+            <a href="{{ url('employees:list') }}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm bg-light">
+      <div class="card-body">
+        <h6 class="fw-semibold mb-3"><i class="bi bi-info-circle me-2"></i>Tips</h6>
+        <ul class="small text-muted mb-0">
+          <li class="mb-2">A user account will be created automatically with the given username and password.</li>
+          <li class="mb-2">Assign the correct role (Employee, HR, Manager, Admin).</li>
+          <li class="mb-2">Department and Designation must exist before assigning.</li>
+          <li>Profile picture is optional but recommended.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

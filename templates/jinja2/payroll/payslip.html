@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Payslip{% endblock %}
+{% block page_title %}Payslip — {{ payroll.employee.full_name }}{% endblock %}
+{% block content %}
+
+
+<div class="row g-4">
+  <div class="col-md-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold fs-5"><i class="bi bi-receipt me-2"></i>Payslip</span>
+        <div class="d-flex gap-2">
+          <a href="{{ url('payroll:payslip_pdf', pk=payroll.pk) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i>Download PDF</a>
+          <a href="{{ url('payroll:list') }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back</a>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <p class="mb-1"><strong>Employee:</strong> {{ payroll.employee.full_name }}</p>
+            <p class="mb-1"><strong>Department:</strong> {{ payroll.employee.department or '—' }}</p>
+            <p class="mb-1"><strong>Designation:</strong> {{ payroll.employee.designation or '—' }}</p>
+          </div>
+          <div class="col-md-6 text-md-end">
+            <p class="mb-1"><strong>Period:</strong> {{ '%02d'|format(payroll.month) }}/{{ payroll.year }}</p>
+            <p class="mb-1"><strong>Status:</strong> {{ payroll.status|status_badge|safe }}</p>
+          </div>
+        </div>
+        <table class="table table-bordered">
+          <thead class="table-dark"><tr><th>Description</th><th class="text-end">Amount</th></tr></thead>
+          <tbody>
+            <tr><td><i class="bi bi-cash me-2"></i>Basic Salary</td><td class="text-end fw-semibold">{{ payroll.basic_salary|currency }}</td></tr>
+            {% for a in payroll.allowances.all() %}
+            <tr class="table-success"><td><i class="bi bi-plus-circle me-2 text-success"></i>{{ a.name }}</td><td class="text-end text-success">+{{ a.amount|currency }}</td></tr>
+            {% endfor %}
+            {% for d in payroll.deductions.all() %}
+            <tr class="table-danger"><td><i class="bi bi-dash-circle me-2 text-danger"></i>{{ d.name }}</td><td class="text-end text-danger">-{{ d.amount|currency }}</td></tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr class="table-dark"><th><strong>Net Salary</strong></th><th class="text-end fs-5">{{ payroll.net_salary|currency }}</th></tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-bar-chart me-2"></i>Summary</div>
+      <div class="card-body">
+        <div class="mb-3">
+          <div class="small text-muted">Basic Salary</div>
+          <div class="fs-5 fw-bold text-primary">{{ payroll.basic_salary|currency }}</div>
+        </div>
+        <div class="mb-3">
+          <div class="small text-muted">Total Allowances</div>
+          <div class="fs-5 fw-bold text-success">+{{ payroll.total_allowances|currency }}</div>
+        </div>
+        <div class="mb-3">
+          <div class="small text-muted">Total Deductions</div>
+          <div class="fs-5 fw-bold text-danger">-{{ payroll.total_deductions|currency }}</div>
+        </div>
+        <hr>
+        <div class="mb-1">
+          <div class="small text-muted">Net Salary</div>
+          <div class="fs-3 fw-bold text-dark">{{ payroll.net_salary|currency }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

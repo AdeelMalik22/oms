@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+
+
+<div class="row g-4">
+  <div class="col-md-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-kanban me-2"></i>{{ title }}
+      </div>
+      <div class="card-body">
+        <form method="post">
+          {{ csrf_input() }}
+          {% for field in form %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|join(', ') }}</div>{% endif %}
+          </div>
+          {% endfor %}
+          <hr>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Project</button>
+            <a href="{{ url('projects:list') }}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="card border-0 shadow-sm bg-light">
+      <div class="card-body">
+        <h6 class="fw-semibold mb-3"><i class="bi bi-info-circle me-2"></i>Tips</h6>
+        <ul class="small text-muted mb-0">
+          <li class="mb-2">Set a realistic <strong>End Date</strong> for deadline tracking.</li>
+          <li class="mb-2">Assign a <strong>Manager</strong> who will oversee project tasks.</li>
+          <li class="mb-2">Status starts as <strong>Planning</strong> — change to Active when work begins.</li>
+          <li>Add team members and tasks after creating the project.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

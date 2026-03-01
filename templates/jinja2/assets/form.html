@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+
+
+<div class="row g-4">
+  <div class="col-md-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-laptop me-2"></i>{{ title }}
+      </div>
+      <div class="card-body">
+        <form method="post">
+          {{ csrf_input() }}
+          {% for field in form %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|join(', ') }}</div>{% endif %}
+          </div>
+          {% endfor %}
+          <hr>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Asset</button>
+            <a href="{{ url('assets:list') }}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="card border-0 shadow-sm bg-light">
+      <div class="card-body">
+        <h6 class="fw-semibold mb-3"><i class="bi bi-info-circle me-2"></i>Tips</h6>
+        <ul class="small text-muted mb-0">
+          <li class="mb-2">Enter a unique serial number for tracking.</li>
+          <li class="mb-2">Set status to <strong>Available</strong> when ready to assign.</li>
+          <li class="mb-2">Record the purchase value for inventory management.</li>
+          <li>Assign to an employee from the asset detail page after saving.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

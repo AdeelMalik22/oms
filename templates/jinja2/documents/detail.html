@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ doc.title }}{% endblock %}
+{% block page_title %}{{ doc.title }}{% endblock %}
+{% block content %}
+
+
+<div class="row g-4">
+  <div class="col-md-7">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white fw-semibold">Document Info</div>
+      <div class="card-body">
+        <p class="mb-1"><strong>Category:</strong> {{ doc.category or '—' }}</p>
+        <p class="mb-1"><strong>Department:</strong> {{ doc.department or 'All' }}</p>
+        <p class="mb-1"><strong>Current Version:</strong> <span class="badge bg-primary">v{{ doc.version }}</span></p>
+        <p class="mb-1"><strong>Uploaded By:</strong> {{ doc.uploaded_by or '—' }}</p>
+        <p class="mb-2"><strong>Last Updated:</strong> {{ doc.updated_at|date_fmt }}</p>
+        <a href="{{ doc.file.url }}" class="btn btn-outline-primary" download><i class="bi bi-download me-1"></i>Download v{{ doc.version }}</a>
+      </div>
+    </div>
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold">Upload New Version</div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          {{ csrf_input() }}
+          {% for field in version_form %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ field.label }}</label>
+            {{ field }}
+          </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-warning btn-sm"><i class="bi bi-upload me-1"></i>Upload New Version</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold">Version History</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead class="table-light"><tr><th>Version</th><th>By</th><th>Date</th><th></th></tr></thead>
+          <tbody>
+            {% for v in versions %}
+            <tr>
+              <td><span class="badge bg-secondary">v{{ v.version }}</span></td>
+              <td>{{ v.uploaded_by or '—' }}</td>
+              <td>{{ v.uploaded_at|date_fmt }}</td>
+              <td><a href="{{ v.file.url }}" download class="btn btn-sm btn-outline-secondary"><i class="bi bi-download"></i></a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

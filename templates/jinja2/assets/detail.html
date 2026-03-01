@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ asset.name }}{% endblock %}
+{% block page_title %}{{ asset.name }}{% endblock %}
+{% block content %}
+
+
+<div class="row g-4">
+  <div class="col-md-5">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold d-flex justify-content-between">
+        Asset Details
+        <a href="{{ url('assets:edit', pk=asset.pk) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+      </div>
+      <div class="card-body">
+        <p class="mb-1"><strong>Category:</strong> {{ asset.category or '—' }}</p>
+        <p class="mb-1"><strong>Serial No:</strong> {{ asset.serial_number or '—' }}</p>
+        <p class="mb-1"><strong>Status:</strong> {{ asset.status|status_badge|safe }}</p>
+        <p class="mb-1"><strong>Condition:</strong> {{ asset.condition or '—' }}</p>
+        <p class="mb-1"><strong>Value:</strong> {{ asset.value|currency }}</p>
+        <p class="mb-1"><strong>Purchase Date:</strong> {{ asset.purchase_date|date_fmt if asset.purchase_date else '—' }}</p>
+        <p class="mb-2"><strong>Assigned To:</strong> {{ asset.assigned_to.full_name if asset.assigned_to else 'Unassigned' }}</p>
+        {% if asset.status == 'Available' %}
+        <form method="post" action="{{ url('assets:assign', pk=asset.pk) }}" class="d-flex gap-2 mt-3">
+          {{ csrf_input() }}
+          <input name="employee_id" type="number" class="form-control" placeholder="Employee ID">
+          <button class="btn btn-success">Assign</button>
+        </form>
+        {% elif asset.assigned_to %}
+        <form method="post" action="{{ url('assets:return', pk=asset.pk) }}" class="mt-3">
+          {{ csrf_input() }}<button class="btn btn-warning">Return Asset</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold">Assignment History</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead class="table-light"><tr><th>Employee</th><th>Assigned</th><th>Returned</th></tr></thead>
+          <tbody>
+            {% for h in history %}
+            <tr>
+              <td>{{ h.employee.full_name }}</td>
+              <td>{{ h.assigned_at|date_fmt }}</td>
+              <td>{{ h.returned_at|date_fmt if h.returned_at else '<span class="badge bg-primary">Current</span>'|safe }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="text-muted text-center">No history.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

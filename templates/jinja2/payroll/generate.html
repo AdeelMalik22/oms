@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Generate Payroll{% endblock %}
+{% block page_title %}Generate Payroll{% endblock %}
+{% block content %}
+
+
+<div class="row g-4">
+  <div class="col-md-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-calculator me-2"></i>Payroll Details</div>
+      <div class="card-body">
+        <form method="post">
+          {{ csrf_input() }}
+          <div class="row">
+            {% for field in form %}
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|join(', ') }}</div>{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          <hr>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-calculator me-1"></i>Generate</button>
+            <a href="{{ url('payroll:list') }}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="card border-0 shadow-sm bg-light">
+      <div class="card-body">
+        <h6 class="fw-semibold mb-3"><i class="bi bi-info-circle me-2"></i>How It Works</h6>
+        <ul class="small text-muted mb-0">
+          <li class="mb-2">Select the employee and month/year period.</li>
+          <li class="mb-2">Enter basic salary, total allowances, and deductions.</li>
+          <li class="mb-2">Net salary is calculated automatically: <strong>Basic + Allowances − Deductions</strong>.</li>
+          <li class="mb-2">Status starts as <strong>Draft</strong>. Change to <strong>Generated</strong> when ready.</li>
+          <li>You can mark it as <strong>Paid</strong> from the payroll list later.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Projects{% endblock %}
+{% block page_title %}Projects{% endblock %}
+{% block content %}
+
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <span class="text-muted small">{{ projects|length }} project(s)</span>
+  {% if request.user.is_admin or request.user.is_manager %}
+  <a href="{{ url('projects:add') }}" class="btn btn-primary"><i class="bi bi-plus me-1"></i>New Project</a>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  {% for project in projects %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h6 class="fw-bold mb-0">
+            <a href="{{ url('projects:detail', pk=project.pk) }}" class="text-decoration-none">{{ project.name }}</a>
+          </h6>
+          {{ project.status|status_badge|safe }}
+        </div>
+        <p class="text-muted small mb-3">{{ project.description[:120] if project.description else 'No description.' }}{% if project.description and project.description|length > 120 %}...{% endif %}</p>
+        <div class="mb-3">
+          <div class="d-flex justify-content-between small text-muted mb-1"><span>Progress</span><span>{{ project.progress }}%</span></div>
+          <div class="progress" style="height:6px"><div class="progress-bar bg-primary" style="width:{{ project.progress }}%"></div></div>
+        </div>
+        <div class="d-flex justify-content-between small text-muted">
+          <span><i class="bi bi-person me-1"></i>{{ project.manager or '—' }}</span>
+          <span><i class="bi bi-list-task me-1"></i>{{ project.tasks.count() }} tasks</span>
+        </div>
+        {% if project.end_date %}
+        <div class="small text-muted mt-1"><i class="bi bi-calendar-event me-1"></i>Due {{ project.end_date|date_fmt }}</div>
+        {% endif %}
+      </div>
+      <div class="card-footer bg-white border-0 pt-0">
+        <a href="{{ url('projects:detail', pk=project.pk) }}" class="btn btn-sm btn-outline-primary w-100">View Project</a>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-kanban fs-1 text-muted opacity-50 d-block mb-3"></i>
+        <p class="text-muted mb-3">No projects found.</p>
+        {% if request.user.is_admin or request.user.is_manager %}
+        <a href="{{ url('projects:add') }}" class="btn btn-primary"><i class="bi bi-plus me-1"></i>Create First Project</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+
+
+<div class="row g-4">
+  <div class="col-md-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-megaphone me-2"></i>{{ title }}</div>
+      <div class="card-body">
+        <form method="post">
+          {{ csrf_input() }}
+          {% for field in form %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|join(', ') }}</div>{% endif %}
+          </div>
+          {% endfor %}
+          <hr>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i>Post Announcement</button>
+            <a href="{{ url('announcements:list') }}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="card border-0 shadow-sm bg-light">
+      <div class="card-body">
+        <h6 class="fw-semibold mb-3"><i class="bi bi-info-circle me-2"></i>Tips</h6>
+        <ul class="small text-muted mb-0">
+          <li class="mb-2">Leave <strong>Target Department</strong> blank to post company-wide.</li>
+          <li class="mb-2">Enable <strong>Pinned</strong> to show the announcement on everyone's dashboard.</li>
+          <li>All active employees will receive an email notification.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

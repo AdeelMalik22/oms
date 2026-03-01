@@ -1,0 +1,49 @@
+ {% extends "base.html" %}
+{% block title %}Assets{% endblock %}
+{% block page_title %}Asset Management{% endblock %}
+{% block content %}
+
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <span class="text-muted small">{{ assets|length }} asset(s)</span>
+  <a href="{{ url('assets:add') }}" class="btn btn-primary"><i class="bi bi-plus me-1"></i>Add Asset</a>
+</div>
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light"><tr><th>Name</th><th>Category</th><th>Serial No.</th><th>Assigned To</th><th>Status</th><th>Value</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for asset in assets %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-laptop text-primary"></i>
+              <a href="{{ url('assets:detail', pk=asset.pk) }}" class="text-decoration-none fw-semibold">{{ asset.name }}</a>
+            </div>
+          </td>
+          <td><span class="badge bg-secondary">{{ asset.category or 'General' }}</span></td>
+          <td class="small text-muted">{{ asset.serial_number or '—' }}</td>
+          <td class="small">{{ asset.assigned_to.full_name if asset.assigned_to else '<span class="text-muted">Unassigned</span>'|safe }}</td>
+          <td>{{ asset.status|status_badge|safe }}</td>
+          <td class="fw-semibold">{{ asset.value|currency }}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{{ url('assets:detail', pk=asset.pk) }}" class="btn btn-sm btn-outline-primary" title="View"><i class="bi bi-eye"></i></a>
+              <a href="{{ url('assets:edit', pk=asset.pk) }}" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="text-center text-muted py-5">
+            <i class="bi bi-laptop fs-1 d-block mb-2 opacity-50"></i>
+            No assets found.
+            <br><a href="{{ url('assets:add') }}" class="btn btn-sm btn-primary mt-2"><i class="bi bi-plus me-1"></i>Add First Asset</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

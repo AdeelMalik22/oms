@@ -1,0 +1,14 @@
+django>=4.2
+psycopg2-binary
+django-jinja
+Pillow
+python-decouple
+django-crispy-forms
+crispy-bootstrap5
+whitenoise
+reportlab
+celery
+redis
+django-axes
+sentry-sdk
+

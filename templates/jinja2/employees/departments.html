@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Departments{% endblock %}
+{% block page_title %}Departments{% endblock %}
+{% block content %}
+
+
+<div class="row g-4">
+  <div class="col-md-5">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-plus-circle me-2"></i>Add Department</div>
+      <div class="card-body">
+        <form method="post">
+          {{ csrf_input() }}
+          {% for field in form %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|join(', ') }}</div>{% endif %}
+          </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-primary"><i class="bi bi-plus me-1"></i>Add Department</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-diagram-3 me-2"></i>All Departments</span>
+        <span class="badge bg-primary">{{ departments|length }}</span>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="table-light"><tr><th>Name</th><th>Manager</th><th>Designations</th><th>Created</th></tr></thead>
+          <tbody>
+            {% for dept in departments %}
+            <tr>
+              <td class="fw-semibold">
+                <i class="bi bi-building me-2 text-primary"></i>{{ dept.name }}
+              </td>
+              <td class="small">{{ dept.manager.full_name if dept.manager else '—' }}</td>
+              <td><span class="badge bg-secondary">{{ dept.designations.count() }}</span></td>
+              <td class="small text-muted">{{ dept.created_at|date_fmt }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted py-4">No departments yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

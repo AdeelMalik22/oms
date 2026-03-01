@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }}{% endblock %}
+{% block page_title %}{{ project.name }}{% endblock %}
+{% block content %}
+
+
+<div class="row g-4">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-info-circle me-2"></i>Project Info</span>
+        {% if request.user.is_admin or request.user.is_manager %}
+        <a href="{{ url('projects:edit', pk=project.pk) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">{{ project.description or 'No description.' }}</p>
+        <div class="mb-2 d-flex justify-content-between"><span class="text-muted small">Status</span>{{ project.status|status_badge|safe }}</div>
+        <div class="mb-2"><span class="text-muted small d-block">Manager</span><span class="fw-semibold">{{ project.manager or '—' }}</span></div>
+        <div class="mb-2"><span class="text-muted small d-block">Start Date</span><span class="fw-semibold">{{ project.start_date|date_fmt if project.start_date else '—' }}</span></div>
+        <div class="mb-2"><span class="text-muted small d-block">End Date</span><span class="fw-semibold">{{ project.end_date|date_fmt if project.end_date else '—' }}</span></div>
+        <div class="mb-3"><span class="text-muted small d-block">Budget</span><span class="fw-semibold text-success">{{ project.budget|currency }}</span></div>
+        <div class="d-flex justify-content-between small text-muted mb-1"><span>Progress</span><span>{{ project.progress }}%</span></div>
+        <div class="progress" style="height:10px"><div class="progress-bar bg-primary" style="width:{{ project.progress }}%"></div></div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-people me-2"></i>Team Members <span class="badge bg-secondary ms-1">{{ members|length }}</span></span>
+        {% if can_manage_members %}
+        <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#addMemberForm">
+          <i class="bi bi-person-plus me-1"></i>Add Member
+        </button>
+        {% endif %}
+      </div>
+
+      {% if can_manage_members %}
+      <div class="collapse" id="addMemberForm">
+        <div class="card-body border-bottom bg-light">
+          <form method="post" action="{{ url('projects:add_member', pk=project.pk) }}" class="d-flex gap-2 flex-wrap align-items-end">
+            {{ csrf_input() }}
+            <div class="flex-grow-1">
+              <label class="form-label small fw-semibold mb-1">Employee</label>
+              {{ member_form.employee }}
+            </div>
+            <div style="min-width:160px">
+              <label class="form-label small fw-semibold mb-1">Role</label>
+              {{ member_form.role }}
+            </div>
+            <button type="submit" class="btn btn-success btn-sm" style="height:38px">
+              <i class="bi bi-plus-lg me-1"></i>Add
+            </button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
+      <ul class="list-group list-group-flush">
+        {% for m in members %}
+        <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+          <div class="d-flex align-items-center gap-2">
+            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
+                 style="width:32px;height:32px;font-size:0.8rem;flex-shrink:0;">
+              {{ m.employee.full_name[0]|upper }}
+            </div>
+            <div>
+              <div class="small fw-semibold">{{ m.employee.full_name }}</div>
+              <div class="small text-muted">{{ m.employee.department or '—' }}</div>
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-secondary">{{ m.role or 'Member' }}</span>
+            {% if can_manage_members %}
+            <form method="post" action="{{ url('projects:remove_member', pk=project.pk, member_pk=m.pk) }}"
+                  onsubmit="return confirm('Remove {{ m.employee.full_name }} from this project?')">
+              {{ csrf_input() }}
+              <button class="btn btn-sm btn-outline-danger py-0 px-2" title="Remove">
+                <i class="bi bi-person-dash"></i>
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted small py-3 text-center">
+          <i class="bi bi-people fs-4 d-block mb-1 opacity-50"></i>
+          No members assigned yet.
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h6 class="fw-semibold mb-0"><i class="bi bi-list-task me-2"></i>Tasks <span class="badge bg-primary">{{ tasks|length }}</span></h6>
+      {% if request.user.is_admin or request.user.is_manager %}
+      <a href="{{ url('projects:task_add', project_pk=project.pk) }}" class="btn btn-sm btn-primary"><i class="bi bi-plus me-1"></i>Add Task</a>
+      {% endif %}
+    </div>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="table-light"><tr><th>Title</th><th>Assigned To</th><th>Priority</th><th>Status</th><th>Due</th><th>Update</th></tr></thead>
+          <tbody>
+            {% for task in tasks %}
+            <tr>
+              <td class="fw-semibold small">{{ task.title }}</td>
+              <td class="small">{{ task.assigned_to.full_name if task.assigned_to else '—' }}</td>
+              <td>{{ task.priority|status_badge|safe }}</td>
+              <td>{{ task.status|status_badge|safe }}</td>
+              <td class="small">{{ task.due_date|date_fmt if task.due_date else '—' }}</td>
+              <td>
+                <form method="post" action="{{ url('projects:task_status', pk=task.pk) }}">
+                  {{ csrf_input() }}
+                  <select name="status" class="form-select form-select-sm" style="min-width:110px" onchange="this.form.submit()">
+                    {% for s in ['To-Do','In Progress','Review','Done'] %}
+                    <option value="{{ s }}" {{ 'selected' if task.status == s else '' }}>{{ s }}</option>
+                    {% endfor %}
+                  </select>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="6" class="text-center text-muted py-4">
+                <i class="bi bi-list-task fs-2 d-block mb-2 opacity-50"></i>
+                No tasks yet.
+                {% if request.user.is_admin or request.user.is_manager %}
+                <br><a href="{{ url('projects:task_add', project_pk=project.pk) }}" class="btn btn-sm btn-primary mt-2"><i class="bi bi-plus me-1"></i>Add First Task</a>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

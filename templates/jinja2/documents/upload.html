@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Upload Document{% endblock %}
+{% block page_title %}Upload Document{% endblock %}
+{% block content %}
+
+
+<div class="row g-4">
+  <div class="col-md-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-upload me-2"></i>Upload Document</div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          {{ csrf_input() }}
+          {% for field in form %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|join(', ') }}</div>{% endif %}
+          </div>
+          {% endfor %}
+          <small class="text-muted d-block mb-3"><i class="bi bi-info-circle me-1"></i>Allowed: PDF, DOCX, XLSX, PNG, JPG — Max 10MB</small>
+          <hr>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-upload me-1"></i>Upload</button>
+            <a href="{{ url('documents:list') }}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="card border-0 shadow-sm bg-light">
+      <div class="card-body">
+        <h6 class="fw-semibold mb-3"><i class="bi bi-info-circle me-2"></i>Guidelines</h6>
+        <ul class="small text-muted mb-0">
+          <li class="mb-2">Give a clear, descriptive title.</li>
+          <li class="mb-2">Select the appropriate category for easier discovery.</li>
+          <li class="mb-2">Leave department blank to make the document visible to everyone.</li>
+          <li>Uploading a new version of the same document is supported from the document detail page.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
