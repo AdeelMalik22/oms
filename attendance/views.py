@@ -117,10 +117,30 @@ def leave_list(request):
             'employee__user', 'leave_type'
         ).order_by('-applied_at')
 
+    # Resignation data for the tab in the leave page
+    if user.is_admin or user.is_hr:
+        resignations = ResignationRequest.objects.select_related(
+            'employee__user', 'reviewed_by'
+        ).order_by('-applied_at')
+        pending_count = ResignationRequest.objects.filter(status='Pending').count()
+        approved_count = ResignationRequest.objects.filter(status='Approved').count()
+        rejected_count = ResignationRequest.objects.filter(status='Rejected').count()
+    else:
+        resignations = ResignationRequest.objects.select_related('reviewed_by').filter(
+            employee=employee
+        ).order_by('-applied_at')
+        pending_count = resignations.filter(status='Pending').count()
+        approved_count = resignations.filter(status='Approved').count()
+        rejected_count = resignations.filter(status='Rejected').count()
+
     return render(request, 'attendance/leaves.html', {
         'leaves': leaves,
         'my_leaves': my_leaves,
         'my_leave_balances': my_leave_balances,
+        'resignations': resignations,
+        'pending_count': pending_count,
+        'approved_count': approved_count,
+        'rejected_count': rejected_count,
     })
 
 
