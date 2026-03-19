@@ -35,7 +35,7 @@ A full-featured, role-based Office Management System built with **Django 4.2+**,
 | **Authentication** | Login, logout, profile settings, password change, brute-force protection |
 | **Dashboard** | Role-specific dashboards (Admin/HR/Manager/Employee), live clock, check-in widget, stat cards |
 | **Employees** | Add/edit/deactivate employees, departments, designations, CSV export |
-| **Attendance** | Daily check-in/check-out for all roles, attendance history, weekly bar chart |
+| **Attendance** | Daily check-in/check-out for all roles, attendance history, weekly bar chart, **resignations with HR approval & auto-deactivation on last working date** |
 | **Leaves** | Apply for leave, HR/Manager approval & rejection, per-type leave balance tracking |
 | **Payroll** | Generate payslips, allowances, deductions, PDF download, employee payslip portal |
 | **Projects** | Create projects, assign managers, add/remove team members, progress tracking |
@@ -568,6 +568,7 @@ No models — pure view layer aggregating data from other apps:
 |---|---|---|---|
 | `send_announcement_email` | `announcements/tasks.py` | New announcement posted | Emails all employees in the target department (or all staff for company-wide) |
 | `send_leave_decision_email` | `attendance/tasks.py` | Leave approved or rejected | Emails the employee with the HR decision |
+| `deactivate_resigned_users` | `attendance/tasks.py` | Celery Beat — daily (optional) | Deactivates users whose approved resignation last working date has passed |
 | `check_task_deadlines` | `projects/tasks.py` | Celery Beat — daily | Creates in-app notifications for overdue tasks |
 
 ### Development mode — no Redis required
@@ -604,6 +605,7 @@ celery -A oms_project beat --loglevel=info
 | **Project access control** | Employees attempting to access a project they don't belong to are redirected with an error |
 | **Announcement filtering** | Employees never see announcements targeted to other departments |
 | **Login required** | All views decorated with `@login_required` — unauthenticated requests redirect to login |
+| **Resignation enforcement** | Approved resignations deactivate accounts on/after the last working date; optional daily task `deactivate_resigned_users` to auto-enforce |
 | **Clickjacking protection** | `XFrameOptionsMiddleware` prevents iframe embedding |
 | **Secret key isolation** | `SECRET_KEY` loaded from `.env` via python-decouple — never hardcoded |
 
@@ -869,4 +871,3 @@ Thumbs.db
 
 *Built with ❤️ using Django · PostgreSQL · Bootstrap 5 · Celery · Redis*
 *© 2026 Office Management System*
-
