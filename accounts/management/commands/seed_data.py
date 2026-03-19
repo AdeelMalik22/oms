@@ -83,14 +83,18 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('✔ Designations'))
 
         # ── Leave Types ────────────────────────────────────────────────
-        for name, days, paid in [
-            ('Annual Leave',   21,  True),
-            ('Sick Leave',     10,  True),
-            ('Casual Leave',   7,   True),
-            ('Maternity Leave',90,  True),
-            ('Unpaid Leave',   30,  False),
-        ]:
-            LeaveType.objects.get_or_create(name=name, defaults={'max_days_per_year': days, 'is_paid': paid})
+        leave_types_config = [
+            ('Exams',          25,  True,  'info',    'bi-book'),
+            ('Sick Leave',     5,   True,  'danger',  'bi-hospital'),
+            ('Casual',         10,  True,  'warning', 'bi-calendar-x'),
+            ('Short',          5,   True,  'success', 'bi-clock'),
+            ('Emergency',      5,   True,  'danger',  'bi-exclamation-triangle'),
+        ]
+        for name, days, paid, color, icon in leave_types_config:
+            LeaveType.objects.get_or_create(
+                name=name,
+                defaults={'max_days_per_year': days, 'is_paid': paid, 'color': color, 'icon': icon}
+            )
         self.stdout.write(self.style.SUCCESS('✔ Leave Types'))
 
         # ── Asset & Document Categories ────────────────────────────────

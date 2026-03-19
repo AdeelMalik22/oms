@@ -1,45 +1,87 @@
 {% extends "base.html" %}
 {% block title %}Apply Leave{% endblock %}
-{% block page_title %}Apply for Leave{% endblock %}
+{% block page_title %}Leave Application{% endblock %}
 {% block content %}
 
+<div class="row g-4 mb-4">
+  <div class="col-md-8">
+    <!-- Leave Balance Cards -->
+    <h6 class="fw-semibold mb-3"><i class="bi bi-calendar-check me-2"></i>My Leave Balances</h6>
+    <div class="row g-3">
+      {% for leave_id, data in leave_balances.items() %}
+      <div class="col-sm-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <h6 class="card-title mb-1">{{ data.leave_type.name }}</h6>
+                <small class="text-muted">{{ data.total }} days/year</small>
+              </div>
+              <i class="bi {{ data.leave_type.icon }} fs-4 text-{{ data.leave_type.color }} opacity-50"></i>
+            </div>
+            <hr class="my-2">
+            <div class="row text-center">
+              <div class="col-6">
+                <div class="small text-muted">Used</div>
+                <div class="fs-5 fw-bold text-danger">{{ data.used }}/{{ data.total }}</div>
+              </div>
+              <div class="col-6">
+                <div class="small text-muted">Remaining</div>
+                <div class="fs-5 fw-bold text-success">{{ data.remaining }}</div>
+              </div>
+            </div>
+            <!-- Progress Bar -->
+            <div class="mt-3">
+              <div class="progress" style="height: 6px;">
+                <div class="progress-bar bg-{{ data.leave_type.color }}" role="progressbar"
+                     style="width: {{ (data.used / data.total * 100)|round|int }}%"
+                     aria-valuenow="{{ data.used }}" aria-valuemin="0" aria-valuemax="{{ data.total }}"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
 
-<div class="row g-4">
-  <div class="col-md-7">
+  <div class="col-md-4">
+    <!-- Leave Application Form -->
     <div class="card border-0 shadow-sm">
-      <div class="card-header bg-white fw-semibold"><i class="bi bi-calendar-plus me-2"></i>Leave Application</div>
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-file-earmark-plus me-2"></i>New Request</div>
       <div class="card-body">
         <form method="post">
           {{ csrf_input() }}
           {% for field in form %}
           <div class="mb-3">
-            <label class="form-label fw-semibold">{{ field.label }}</label>
+            <label class="form-label fw-semibold small">{{ field.label }}</label>
             {{ field }}
             {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|join(', ') }}</div>{% endif %}
           </div>
           {% endfor %}
           <hr>
           <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i>Submit Request</button>
-            <a href="{{ url('attendance:my') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-send me-1"></i>Submit</button>
+            <a href="{{ url('attendance:leaves') }}" class="btn btn-outline-secondary btn-sm">Cancel</a>
           </div>
         </form>
       </div>
     </div>
-  </div>
-  <div class="col-md-5">
-    <div class="card border-0 shadow-sm bg-light">
+
+    <!-- Guidelines Card -->
+    <div class="card border-0 shadow-sm bg-light mt-3">
       <div class="card-body">
-        <h6 class="fw-semibold mb-3"><i class="bi bi-info-circle me-2"></i>Leave Guidelines</h6>
-        <ul class="small text-muted mb-0">
-          <li class="mb-2">Select the correct leave type from the dropdown.</li>
-          <li class="mb-2">Ensure start date is before or equal to end date.</li>
-          <li class="mb-2">Provide a clear reason for your leave request.</li>
-          <li class="mb-2">Your request will be reviewed by HR/Admin.</li>
-          <li>You will be notified once your leave is approved or rejected.</li>
+        <h6 class="fw-semibold mb-3"><i class="bi bi-info-circle me-2"></i>Guidelines</h6>
+        <ul class="small text-muted mb-0 ps-3">
+          <li class="mb-2">Select a leave type from dropdown</li>
+          <li class="mb-2">Start date must be ≤ end date</li>
+          <li class="mb-2">Provide a clear reason</li>
+          <li class="mb-2">HR/Admin reviews your request</li>
+          <li>You'll be notified of approval/rejection</li>
         </ul>
       </div>
     </div>
   </div>
 </div>
+
 {% endblock %}

@@ -1,82 +1,282 @@
 {% extends "base.html" %}
 {% block title %}Leave Requests{% endblock %}
-{% block page_title %}Leave Requests{% endblock %}
+{% block page_title %}Leave Management{% endblock %}
 {% block content %}
 
+<style>
+  .leave-tabs-wrap {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+    background: var(--bs-body-bg);
+    overflow-x: auto;
+  }
 
-<!-- Summary Cards -->
-<div class="row g-3 mb-4">
-  <div class="col-sm-4">
-    <div class="card border-0 shadow-sm">
-      <div class="card-body d-flex justify-content-between align-items-center py-3">
-        <div><div class="small text-muted">Pending</div><div class="fs-4 fw-bold text-warning">{{ leaves|selectattr('status', 'equalto', 'Pending')|list|length }}</div></div>
-        <i class="bi bi-hourglass-split fs-2 text-warning opacity-50"></i>
-      </div>
-    </div>
-  </div>
-  <div class="col-sm-4">
-    <div class="card border-0 shadow-sm">
-      <div class="card-body d-flex justify-content-between align-items-center py-3">
-        <div><div class="small text-muted">Approved</div><div class="fs-4 fw-bold text-success">{{ leaves|selectattr('status', 'equalto', 'Approved')|list|length }}</div></div>
-        <i class="bi bi-check-circle fs-2 text-success opacity-50"></i>
-      </div>
-    </div>
-  </div>
-  <div class="col-sm-4">
-    <div class="card border-0 shadow-sm">
-      <div class="card-body d-flex justify-content-between align-items-center py-3">
-        <div><div class="small text-muted">Rejected</div><div class="fs-4 fw-bold text-danger">{{ leaves|selectattr('status', 'equalto', 'Rejected')|list|length }}</div></div>
-        <i class="bi bi-x-circle fs-2 text-danger opacity-50"></i>
-      </div>
-    </div>
-  </div>
+  .leave-tabs {
+    flex-wrap: nowrap;
+    min-width: max-content;
+    border-bottom: 0;
+    margin-bottom: 0;
+  }
+
+  .leave-tabs .nav-link {
+    border: 0;
+    border-right: 1px solid var(--bs-border-color);
+    border-radius: 0;
+    font-weight: 600;
+    color: var(--bs-primary);
+    padding: 0.85rem 1.25rem;
+    background: transparent;
+  }
+
+  .leave-tabs .nav-link.active {
+    color: var(--bs-primary);
+    background: var(--bs-primary-bg-subtle);
+  }
+
+  .leave-balance-card {
+    border: 0;
+    box-shadow: var(--bs-box-shadow-sm);
+  }
+
+  .leave-balance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  }
+
+  .leave-balance-item {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 1rem 1.1rem;
+    border-right: 1px solid var(--bs-border-color-translucent);
+    border-bottom: 1px solid var(--bs-border-color-translucent);
+    background: var(--bs-body-bg);
+  }
+
+  .leave-balance-item.total {
+    background: var(--bs-primary-bg-subtle);
+  }
+
+  .leave-balance-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    border: 1px solid var(--bs-border-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .leave-count {
+    font-size: clamp(1.4rem, 1.3rem + 0.3vw, 1.95rem);
+    font-weight: 700;
+    color: var(--bs-primary);
+    line-height: 1;
+  }
+
+  .leave-table-wrap {
+    overflow-x: auto;
+  }
+
+  .leave-table-wrap table {
+    min-width: 760px;
+  }
+
+  @media (max-width: 767.98px) {
+    .leave-header-actions {
+      flex-direction: column;
+      align-items: stretch !important;
+      gap: 0.75rem;
+    }
+
+    .leave-header-actions .btn {
+      width: 100%;
+    }
+
+    .leave-balance-grid {
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+  }
+</style>
+
+<div class="leave-tabs-wrap mb-4">
+  <ul class="nav nav-tabs leave-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="my-leaves-tab" data-bs-toggle="tab" data-bs-target="#my-leaves" type="button" role="tab" aria-controls="my-leaves" aria-selected="true">
+        <i class="bi bi-file-earmark-check me-2"></i>My Leaves
+      </button>
+    </li>
+    {% if request.user.is_admin or request.user.is_hr %}
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="all-leaves-tab" data-bs-toggle="tab" data-bs-target="#all-leaves" type="button" role="tab" aria-controls="all-leaves" aria-selected="false">
+        <i class="bi bi-list-check me-2"></i>All Leave Requests ({{ leaves|length }})
+      </button>
+    </li>
+    {% endif %}
+  </ul>
 </div>
 
-<div class="d-flex justify-content-end mb-3">
-  <a href="{{ url('attendance:apply_leave') }}" class="btn btn-primary"><i class="bi bi-plus me-1"></i>Apply Leave</a>
-</div>
-<div class="card border-0 shadow-sm">
-  <div class="card-header bg-white fw-semibold"><i class="bi bi-calendar-x me-2"></i>All Leave Requests</div>
-  <div class="card-body p-0">
-    <table class="table table-hover mb-0 align-middle">
-      <thead class="table-light"><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead>
-      <tbody>
-        {% for leave in leaves %}
-        <tr>
-          <td>
-            <div class="d-flex align-items-center gap-2">
-              <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width:32px;height:32px;font-size:0.8rem">
-                {{ leave.employee.full_name[0] }}
-              </div>
-              <span class="small fw-semibold">{{ leave.employee.full_name }}</span>
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="my-leaves" role="tabpanel" aria-labelledby="my-leaves-tab">
+    <div class="d-flex justify-content-between align-items-center mb-3 leave-header-actions">
+      <h6 class="fw-semibold mb-0"><i class="bi bi-calendar-check me-2"></i>My Leave Balances</h6>
+      <a href="{{ url('attendance:apply_leave') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus me-1"></i>Apply Leave</a>
+    </div>
+
+    {% set total_used = my_leave_balances|sum(attribute='used_days') %}
+    {% set total_allowed = my_leave_balances|sum(attribute='total_days') %}
+    <div class="card leave-balance-card mb-4">
+      <div class="card-body p-0">
+        <div class="leave-balance-grid">
+          <div class="leave-balance-item total">
+            <div class="leave-balance-icon"><i class="bi bi-briefcase"></i></div>
+            <div>
+              <div class="leave-count">{{ total_used }}/{{ total_allowed }}</div>
+              <div class="small text-muted">Total</div>
             </div>
-          </td>
-          <td><span class="badge bg-info">{{ leave.leave_type }}</span></td>
-          <td class="small">{{ leave.start_date|date_fmt }}</td>
-          <td class="small">{{ leave.end_date|date_fmt }}</td>
-          <td class="small fw-bold">{{ leave.duration_days }}</td>
-          <td class="small text-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ leave.reason }}">{{ leave.reason }}</td>
-          <td>{{ leave.status|status_badge|safe }}</td>
-          <td>
-            {% if leave.status == 'Pending' and (request.user.is_admin or request.user.is_hr) %}
-            <div class="d-flex gap-1">
-              <form method="post" action="{{ url('attendance:approve_leave', pk=leave.pk) }}" class="d-inline">
-                {{ csrf_input() }}<button class="btn btn-sm btn-success" title="Approve"><i class="bi bi-check-lg"></i></button>
-              </form>
-              <form method="post" action="{{ url('attendance:reject_leave', pk=leave.pk) }}" class="d-inline">
-                {{ csrf_input() }}<button class="btn btn-sm btn-danger" title="Reject"><i class="bi bi-x-lg"></i></button>
-              </form>
+          </div>
+
+          {% for balance in my_leave_balances %}
+          <div class="leave-balance-item">
+            <div class="leave-balance-icon"><i class="bi {{ balance.leave_type.icon }} text-{{ balance.leave_type.color }}"></i></div>
+            <div>
+              <div class="leave-count">{{ balance.used_days }}/{{ balance.total_days }}</div>
+              <div class="small text-muted">{{ balance.leave_type.name }}</div>
             </div>
-            {% elif leave.status != 'Pending' %}
-            <span class="small text-muted">{{ leave.approved_by or '—' }}</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="8" class="text-center text-muted py-4">No leave requests.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <h6 class="fw-semibold mt-4 mb-3"><i class="bi bi-hourglass-split me-2"></i>My Leave Requests</h6>
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body d-flex justify-content-between align-items-center py-3">
+            <div><div class="small text-muted">Pending</div><div class="fs-4 fw-bold text-warning">{{ my_leaves|selectattr('status', 'equalto', 'Pending')|list|length }}</div></div>
+            <i class="bi bi-hourglass-split fs-2 text-warning opacity-50"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body d-flex justify-content-between align-items-center py-3">
+            <div><div class="small text-muted">Approved</div><div class="fs-4 fw-bold text-success">{{ my_leaves|selectattr('status', 'equalto', 'Approved')|list|length }}</div></div>
+            <i class="bi bi-check-circle fs-2 text-success opacity-50"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body d-flex justify-content-between align-items-center py-3">
+            <div><div class="small text-muted">Rejected</div><div class="fs-4 fw-bold text-danger">{{ my_leaves|selectattr('status', 'equalto', 'Rejected')|list|length }}</div></div>
+            <i class="bi bi-x-circle fs-2 text-danger opacity-50"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-calendar-x me-2"></i>Leave History</div>
+      <div class="card-body p-0 leave-table-wrap">
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="table-light"><tr><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Approved By</th></tr></thead>
+          <tbody>
+            {% for leave in my_leaves %}
+            <tr>
+              <td><span class="badge bg-info">{{ leave.leave_type }}</span></td>
+              <td class="small">{{ leave.start_date|date_fmt }}</td>
+              <td class="small">{{ leave.end_date|date_fmt }}</td>
+              <td class="small fw-bold">{{ leave.duration_days }}</td>
+              <td class="small text-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ leave.reason }}">{{ leave.reason }}</td>
+              <td>{{ leave.status|status_badge|safe }}</td>
+              <td class="small text-muted">{{ leave.approved_by or '—' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="text-center text-muted py-4">No leave requests.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
+
+  {% if request.user.is_admin or request.user.is_hr %}
+  <div class="tab-pane fade" id="all-leaves" role="tabpanel" aria-labelledby="all-leaves-tab">
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body d-flex justify-content-between align-items-center py-3">
+            <div><div class="small text-muted">Pending</div><div class="fs-4 fw-bold text-warning">{{ leaves|selectattr('status', 'equalto', 'Pending')|list|length }}</div></div>
+            <i class="bi bi-hourglass-split fs-2 text-warning opacity-50"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body d-flex justify-content-between align-items-center py-3">
+            <div><div class="small text-muted">Approved</div><div class="fs-4 fw-bold text-success">{{ leaves|selectattr('status', 'equalto', 'Approved')|list|length }}</div></div>
+            <i class="bi bi-check-circle fs-2 text-success opacity-50"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body d-flex justify-content-between align-items-center py-3">
+            <div><div class="small text-muted">Rejected</div><div class="fs-4 fw-bold text-danger">{{ leaves|selectattr('status', 'equalto', 'Rejected')|list|length }}</div></div>
+            <i class="bi bi-x-circle fs-2 text-danger opacity-50"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-calendar-x me-2"></i>All Leave Requests</div>
+      <div class="card-body p-0 leave-table-wrap">
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="table-light"><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            {% for leave in leaves %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width:32px;height:32px;font-size:0.8rem">
+                    {{ leave.employee.full_name[0] }}
+                  </div>
+                  <span class="small fw-semibold">{{ leave.employee.full_name }}</span>
+                </div>
+              </td>
+              <td><span class="badge bg-info">{{ leave.leave_type }}</span></td>
+              <td class="small">{{ leave.start_date|date_fmt }}</td>
+              <td class="small">{{ leave.end_date|date_fmt }}</td>
+              <td class="small fw-bold">{{ leave.duration_days }}</td>
+              <td class="small text-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ leave.reason }}">{{ leave.reason }}</td>
+              <td>{{ leave.status|status_badge|safe }}</td>
+              <td>
+                {% if leave.status == 'Pending' and (request.user.is_admin or request.user.is_hr) %}
+                <div class="d-flex gap-1">
+                  <form method="post" action="{{ url('attendance:approve_leave', pk=leave.pk) }}" class="d-inline">
+                    {{ csrf_input() }}<button class="btn btn-sm btn-success" title="Approve"><i class="bi bi-check-lg"></i></button>
+                  </form>
+                  <form method="post" action="{{ url('attendance:reject_leave', pk=leave.pk) }}" class="d-inline">
+                    {{ csrf_input() }}<button class="btn btn-sm btn-danger" title="Reject"><i class="bi bi-x-lg"></i></button>
+                  </form>
+                </div>
+                {% elif leave.status != 'Pending' %}
+                <span class="small text-muted">{{ leave.approved_by or '-' }}</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="text-center text-muted py-4">No leave requests.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

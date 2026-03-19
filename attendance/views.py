@@ -77,13 +77,31 @@ def checkout(request):
 @login_required
 def leave_list(request):
     user = request.user
+    employee = _get_or_create_employee(user)
+    current_year = timezone.now().year
+
+    my_leaves = LeaveRequest.objects.select_related(
+        'leave_type', 'approved_by'
+    ).filter(employee=employee).order_by('-applied_at')
+
+    my_leave_balances = []
+    for leave_type in LeaveType.objects.all().order_by('name'):
+        balance, _ = LeaveBalance.objects.get_or_create(
+            employee=employee,
+            leave_type=leave_type,
+            year=current_year,
+            defaults={'total_days': leave_type.max_days_per_year},
+        )
+        if balance.total_days != leave_type.max_days_per_year:
+            balance.total_days = leave_type.max_days_per_year
+            balance.save(update_fields=['total_days'])
+        my_leave_balances.append(balance)
+
     if user.is_manager:
-        # Manager sees leaves for employees in their projects
         try:
             emp = user.employee_profile
-            from projects.models import Project, ProjectMember
+            from projects.models import ProjectMember
             from django.db.models import Q
-            # Get all employees who are members of projects this manager manages
             team_emp_ids = ProjectMember.objects.filter(
                 Q(project__manager=emp)
             ).values_list('employee_id', flat=True).distinct()
@@ -93,21 +111,72 @@ def leave_list(request):
         except Exception:
             leaves = LeaveRequest.objects.none()
     else:
-        leaves = LeaveRequest.objects.select_related('employee__user', 'leave_type').order_by('-applied_at')
-    return render(request, 'attendance/leaves.html', {'leaves': leaves})
+        leaves = LeaveRequest.objects.select_related(
+            'employee__user', 'leave_type'
+        ).order_by('-applied_at')
+
+    return render(request, 'attendance/leaves.html', {
+        'leaves': leaves,
+        'my_leaves': my_leaves,
+        'my_leave_balances': my_leave_balances,
+    })
 
 
 @login_required
 def apply_leave(request):
     employee = get_object_or_404(Employee, user=request.user)
     form = LeaveRequestForm(request.POST or None)
+
+    # Get current year
+    from django.utils import timezone
+    current_year = timezone.now().year
+
+    # Get all leave types with their balances
+    leave_types = LeaveType.objects.all()
+    leave_balances = {}
+
+    for leave_type in leave_types:
+        balance, _ = LeaveBalance.objects.get_or_create(
+            employee=employee,
+            leave_type=leave_type,
+            year=current_year,
+            defaults={'total_days': leave_type.max_days_per_year}
+        )
+        leave_balances[leave_type.id] = {
+            'leave_type': leave_type,
+            'balance': balance,
+            'total': balance.total_days,
+            'used': balance.used_days,
+            'remaining': balance.remaining_days,
+        }
+
     if form.is_valid():
         leave = form.save(commit=False)
         leave.employee = employee
+
+        # Check if employee has enough balance
+        balance = LeaveBalance.objects.get(
+            employee=employee,
+            leave_type=leave.leave_type,
+            year=current_year
+        )
+        if balance.remaining_days < leave.duration_days:
+            messages.error(request, f'Insufficient balance. You have {balance.remaining_days} days remaining.')
+            return render(request, 'attendance/apply_leave.html', {
+                'form': form,
+                'leave_balances': leave_balances,
+                'employee': employee,
+            })
+
         leave.save()
         messages.success(request, 'Leave request submitted.')
         return redirect('attendance:leaves')
-    return render(request, 'attendance/apply_leave.html', {'form': form})
+
+    return render(request, 'attendance/apply_leave.html', {
+        'form': form,
+        'leave_balances': leave_balances,
+        'employee': employee,
+    })
 
 
 @login_required

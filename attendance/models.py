@@ -6,6 +6,11 @@ class LeaveType(models.Model):
     name = models.CharField(max_length=50, unique=True)
     max_days_per_year = models.PositiveIntegerField(default=0)
     is_paid = models.BooleanField(default=True)
+    color = models.CharField(max_length=20, default='primary', help_text='Bootstrap color (primary, success, danger, warning, info, etc.)')
+    icon = models.CharField(max_length=50, default='bi-calendar', help_text='Bootstrap icon class')
+
+    class Meta:
+        ordering = ['name']
 
     def __str__(self):
         return self.name
