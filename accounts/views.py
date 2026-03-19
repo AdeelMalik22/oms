@@ -4,7 +4,10 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth import update_session_auth_hash
+from django.utils import timezone
+
 from .forms import LoginForm, UserProfileForm
+from attendance.models import ResignationRequest
 
 
 def login_view(request):
@@ -18,6 +21,17 @@ def login_view(request):
             password=form.cleaned_data['password'],
         )
         if user:
+            # Auto-deactivate users whose approved resignation effective date has passed
+            today = timezone.now().date()
+            latest_resignation = ResignationRequest.objects.filter(
+                employee__user=user, status='Approved'
+            ).order_by('-requested_last_working_date').first()
+            if latest_resignation and latest_resignation.requested_last_working_date <= today:
+                user.is_active = False
+                user.save(update_fields=['is_active'])
+                messages.error(request, 'Your account has been deactivated due to your resignation. Please contact HR.')
+                return redirect('accounts:login')
+
             login(request, user)
             return redirect(request.GET.get('next', 'dashboard:index'))
         messages.error(request, 'Invalid username or password.')

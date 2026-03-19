@@ -3,7 +3,7 @@ from django.test import TestCase
 from django.urls import reverse
 from accounts.tests import make_user, make_dept
 from employees.tests import make_employee
-from attendance.models import Attendance, LeaveRequest, LeaveType, LeaveBalance
+from attendance.models import Attendance, LeaveRequest, LeaveType, LeaveBalance, ResignationRequest
 
 
 def make_leave_type(name='Annual Leave', days=21):
@@ -181,3 +181,147 @@ class LeaveRequestFlowTest(TestCase):
         self.client.force_login(self.hr)
         r = self.client.get(reverse('attendance:leaves'))
         self.assertEqual(r.status_code, 200)
+
+
+# ─── Resignation Tests ────────────────────────────────────────────────────────
+
+class ResignationRequestFlowTest(TestCase):
+    def setUp(self):
+        self.hr = make_user('hr_resign', role_name='HR')
+        self.emp = make_employee('resign_emp', role_name='Employee')
+        self.client.force_login(self.emp.user)
+
+    def test_apply_resignation_page_loads(self):
+        r = self.client.get(reverse('attendance:apply_resignation'))
+        self.assertEqual(r.status_code, 200)
+
+    def test_apply_resignation_creates_request(self):
+        before = ResignationRequest.objects.count()
+        self.client.post(reverse('attendance:apply_resignation'), {
+            'requested_last_working_date': '2026-04-30',
+            'reason': 'Better opportunity elsewhere',
+        })
+        self.assertEqual(ResignationRequest.objects.count(), before + 1)
+
+    def test_apply_resignation_defaults_to_pending(self):
+        self.client.post(reverse('attendance:apply_resignation'), {
+            'requested_last_working_date': '2026-05-15',
+            'reason': 'Pursuing higher education',
+        })
+        resignation = ResignationRequest.objects.latest('applied_at')
+        self.assertEqual(resignation.status, 'Pending')
+
+    def test_apply_resignation_sets_employee(self):
+        self.client.post(reverse('attendance:apply_resignation'), {
+            'requested_last_working_date': '2026-06-01',
+            'reason': 'Relocation',
+        })
+        resignation = ResignationRequest.objects.latest('applied_at')
+        self.assertEqual(resignation.employee, self.emp)
+
+    def test_cannot_apply_if_pending_resignation_exists(self):
+        ResignationRequest.objects.create(
+            employee=self.emp,
+            requested_last_working_date=datetime.date(2026, 4, 1),
+            reason='First resignation'
+        )
+        before = ResignationRequest.objects.count()
+        self.client.post(reverse('attendance:apply_resignation'), {
+            'requested_last_working_date': '2026-05-01',
+            'reason': 'Second resignation attempt',
+        })
+        # Should not create a new one
+        self.assertEqual(ResignationRequest.objects.count(), before)
+
+    def test_resignation_list_shows_own_for_employee(self):
+        ResignationRequest.objects.create(
+            employee=self.emp,
+            requested_last_working_date=datetime.date(2026, 4, 15),
+            reason='Career change'
+        )
+        r = self.client.get(reverse('attendance:resignations'))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(r.context['resignations']), 1)
+
+    def test_approve_resignation_changes_status(self):
+        resignation = ResignationRequest.objects.create(
+            employee=self.emp,
+            requested_last_working_date=datetime.date(2026, 5, 1),
+            reason='New job'
+        )
+        self.client.force_login(self.hr)
+        self.client.post(reverse('attendance:approve_resignation', kwargs={'pk': resignation.pk}))
+        resignation.refresh_from_db()
+        self.assertEqual(resignation.status, 'Approved')
+
+    def test_approve_resignation_sets_reviewer(self):
+        resignation = ResignationRequest.objects.create(
+            employee=self.emp,
+            requested_last_working_date=datetime.date(2026, 5, 1),
+            reason='New job'
+        )
+        self.client.force_login(self.hr)
+        self.client.post(reverse('attendance:approve_resignation', kwargs={'pk': resignation.pk}))
+        resignation.refresh_from_db()
+        self.assertEqual(resignation.reviewed_by, self.hr)
+        self.assertIsNotNone(resignation.reviewed_at)
+
+    def test_reject_resignation_changes_status(self):
+        resignation = ResignationRequest.objects.create(
+            employee=self.emp,
+            requested_last_working_date=datetime.date(2026, 5, 1),
+            reason='New job'
+        )
+        self.client.force_login(self.hr)
+        self.client.post(reverse('attendance:reject_resignation', kwargs={'pk': resignation.pk}))
+        resignation.refresh_from_db()
+        self.assertEqual(resignation.status, 'Rejected')
+
+    def test_employee_cannot_approve_resignation(self):
+        resignation = ResignationRequest.objects.create(
+            employee=self.emp,
+            requested_last_working_date=datetime.date(2026, 5, 1),
+            reason='New job'
+        )
+        # Still logged in as employee
+        r = self.client.post(reverse('attendance:approve_resignation', kwargs={'pk': resignation.pk}))
+        resignation.refresh_from_db()
+        self.assertEqual(resignation.status, 'Pending')  # Should not change
+
+    def test_resignation_list_shows_all_for_hr(self):
+        emp2 = make_employee('resign_emp2', role_name='Employee')
+        ResignationRequest.objects.create(
+            employee=self.emp,
+            requested_last_working_date=datetime.date(2026, 4, 15),
+            reason='Career change'
+        )
+        ResignationRequest.objects.create(
+            employee=emp2,
+            requested_last_working_date=datetime.date(2026, 5, 1),
+            reason='Relocation'
+        )
+        self.client.force_login(self.hr)
+        r = self.client.get(reverse('attendance:resignations'))
+        self.assertEqual(r.status_code, 200)
+        # HR should see all resignations
+        self.assertEqual(len(r.context['resignations']), 2)
+
+    def test_resignation_counts_correct_for_hr(self):
+        ResignationRequest.objects.create(
+            employee=self.emp,
+            requested_last_working_date=datetime.date(2026, 4, 15),
+            reason='Career change',
+            status='Pending'
+        )
+        ResignationRequest.objects.create(
+            employee=self.emp,
+            requested_last_working_date=datetime.date(2026, 5, 1),
+            reason='Relocation',
+            status='Approved'
+        )
+        self.client.force_login(self.hr)
+        r = self.client.get(reverse('attendance:resignations'))
+        self.assertEqual(r.context['pending_count'], 1)
+        self.assertEqual(r.context['approved_count'], 1)
+        self.assertEqual(r.context['rejected_count'], 0)
+

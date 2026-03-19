@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Attendance, LeaveRequest, LeaveType, LeaveBalance
+from .models import Attendance, LeaveRequest, LeaveType, LeaveBalance, ResignationRequest
 
 
 @admin.register(Attendance)
@@ -25,3 +25,13 @@ class LeaveTypeAdmin(admin.ModelAdmin):
 class LeaveBalanceAdmin(admin.ModelAdmin):
     list_display = ['employee', 'leave_type', 'year', 'total_days', 'used_days', 'remaining_days']
     list_filter = ['year', 'leave_type']
+
+
+@admin.register(ResignationRequest)
+class ResignationRequestAdmin(admin.ModelAdmin):
+    list_display = ['employee', 'requested_last_working_date', 'status', 'applied_at', 'reviewed_by']
+    list_filter = ['status', 'applied_at']
+    search_fields = ['employee__user__first_name', 'employee__user__last_name']
+    date_hierarchy = 'applied_at'
+    readonly_fields = ['applied_at', 'reviewed_at', 'reviewed_by']
+

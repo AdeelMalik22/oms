@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Submit Resignation{% endblock %}
+{% block page_title %}Submit Resignation{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-door-open me-2"></i>Resignation Request Form</div>
+      <div class="card-body">
+        <form method="post" class="needs-validation">
+          {{ csrf_input() }}
+
+          <div class="mb-3">
+            <label for="id_requested_last_working_date" class="form-label">Last Working Date <span class="text-danger">*</span></label>
+            <input type="date" class="form-control" id="id_requested_last_working_date" name="requested_last_working_date" required>
+            <small class="text-muted">The date you intend to stop working</small>
+            {% if form.requested_last_working_date.errors %}
+            <div class="invalid-feedback d-block">{{ form.requested_last_working_date.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label for="id_reason" class="form-label">Reason for Resignation <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="id_reason" name="reason" rows="5" placeholder="Please provide details about your resignation..." required></textarea>
+            <small class="text-muted">Be clear and professional in your explanation</small>
+            {% if form.reason.errors %}
+            <div class="invalid-feedback d-block">{{ form.reason.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle me-2"></i>Submit Resignation</button>
+            <a href="{{ url('attendance:resignations') }}" class="btn btn-secondary"><i class="bi bi-arrow-left me-2"></i>Cancel</a>
+          </div>
+        </form>
+
+        <hr class="my-4">
+
+        <div class="alert alert-info" role="alert">
+          <i class="bi bi-info-circle me-2"></i>
+          <strong>Important:</strong> Submitting a resignation is a serious action. Please ensure you have carefully considered this decision before proceeding. Your HR manager will review your request.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+

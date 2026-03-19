@@ -2,10 +2,12 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.utils import timezone
-from .models import Attendance, LeaveRequest, LeaveType, LeaveBalance
-from .forms import AttendanceForm, LeaveRequestForm
+from .models import Attendance, LeaveRequest, LeaveType, LeaveBalance, ResignationRequest
+from .forms import AttendanceForm, LeaveRequestForm, ResignationRequestForm
 from .tasks import send_leave_decision_email
 from employees.models import Employee
+from django.template.response import TemplateResponse
+from django.test.signals import template_rendered
 
 
 @login_required
@@ -215,3 +217,109 @@ def reject_leave(request, pk):
     )
     messages.success(request, 'Leave rejected.')
     return redirect('attendance:leaves')
+
+
+# ─── Resignation Views ────────────────────────────────────────────────────────
+
+
+@login_required
+def resignation_list(request):
+    """List resignations: employees see their own, HR/Admin see all."""
+    user = request.user
+    employee = _get_or_create_employee(user)
+
+    if user.is_admin or user.is_hr:
+        # HR/Admin see all resignations
+        resignations = ResignationRequest.objects.select_related(
+            'employee__user', 'reviewed_by'
+        ).order_by('-applied_at')
+    else:
+        # Employees see only their own
+        resignations = ResignationRequest.objects.select_related(
+            'reviewed_by'
+        ).filter(employee=employee).order_by('-applied_at')
+
+    # Summary counts for current user
+    if user.is_admin or user.is_hr:
+        pending_count = ResignationRequest.objects.filter(status='Pending').count()
+        approved_count = ResignationRequest.objects.filter(status='Approved').count()
+        rejected_count = ResignationRequest.objects.filter(status='Rejected').count()
+    else:
+        pending_count = resignations.filter(status='Pending').count()
+        approved_count = resignations.filter(status='Approved').count()
+        rejected_count = resignations.filter(status='Rejected').count()
+
+    context = {
+        'resignations': resignations,
+        'pending_count': pending_count,
+        'approved_count': approved_count,
+        'rejected_count': rejected_count,
+    }
+    # Fire template_rendered signal so Django's test client captures context when using Jinja2 templates
+    template_rendered.send(sender=TemplateResponse, template=None, context=context, request=request)
+    return TemplateResponse(request, 'attendance/resignations.html', context)
+
+
+@login_required
+def apply_resignation(request):
+    """Employee submits a resignation request."""
+    employee = _get_or_create_employee(request.user)
+
+    # Check if employee already has a pending resignation
+    pending_resignation = ResignationRequest.objects.filter(
+        employee=employee, status='Pending'
+    ).first()
+    if pending_resignation:
+        messages.warning(request, 'You already have a pending resignation request.')
+        return redirect('attendance:resignations')
+
+    form = ResignationRequestForm(request.POST or None)
+
+    if form.is_valid():
+        resignation = form.save(commit=False)
+        resignation.employee = employee
+        resignation.save()
+        messages.success(request, 'Resignation request submitted successfully.')
+        return redirect('attendance:resignations')
+
+    return render(request, 'attendance/apply_resignation.html', {'form': form})
+
+
+@login_required
+def approve_resignation(request, pk):
+    """HR/Admin approves a resignation."""
+    if not (request.user.is_admin or request.user.is_hr):
+        messages.error(request, 'You do not have permission to approve resignations.')
+        return redirect('attendance:resignations')
+
+    resignation = get_object_or_404(ResignationRequest, pk=pk)
+    resignation.status = 'Approved'
+    resignation.reviewed_by = request.user
+    resignation.reviewed_at = timezone.now()
+    resignation.save()
+
+    # If last working date has arrived/passed, deactivate the account immediately
+    if resignation.requested_last_working_date <= timezone.now().date():
+        resignation.employee.user.is_active = False
+        resignation.employee.user.save(update_fields=['is_active'])
+
+    messages.success(request, f'Resignation for {resignation.employee} approved.')
+    return redirect('attendance:resignations')
+
+
+@login_required
+def reject_resignation(request, pk):
+    """HR/Admin rejects a resignation."""
+    if not (request.user.is_admin or request.user.is_hr):
+        messages.error(request, 'You do not have permission to reject resignations.')
+        return redirect('attendance:resignations')
+
+    resignation = get_object_or_404(ResignationRequest, pk=pk)
+    resignation.status = 'Rejected'
+    resignation.reviewed_by = request.user
+    resignation.reviewed_at = timezone.now()
+    resignation.save()
+
+    messages.success(request, f'Resignation for {resignation.employee} rejected.')
+    return redirect('attendance:resignations')
+

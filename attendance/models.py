@@ -76,3 +76,26 @@ class LeaveRequest(models.Model):
     @property
     def duration_days(self):
         return (self.end_date - self.start_date).days + 1
+
+
+class ResignationRequest(models.Model):
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'), ('Approved', 'Approved'), ('Rejected', 'Rejected'),
+    ]
+    employee = models.ForeignKey('employees.Employee', on_delete=models.CASCADE, related_name='resignation_requests')
+    requested_last_working_date = models.DateField()
+    reason = models.TextField()
+    notes = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='reviewed_resignations'
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    applied_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-applied_at']
+
+    def __str__(self):
+        return f"{self.employee} resignation ({self.status})"

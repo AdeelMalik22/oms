@@ -48,6 +48,7 @@
         <a href="{{ url('employees:departments') }}" class="nav-link {{ 'active' if '/employees/departments' in request.path }}"><i class="bi bi-diagram-3 me-2"></i>Departments</a>
         <a href="{{ url('attendance:list') }}" class="nav-link {{ 'active' if request.path == '/attendance/' }}"><i class="bi bi-calendar-check me-2"></i>Attendance</a>
         <a href="{{ url('attendance:leaves') }}" class="nav-link {{ 'active' if '/leaves' in request.path and '/apply' not in request.path }}"><i class="bi bi-calendar-x me-2"></i>Leave Requests</a>
+        <a href="{{ url('attendance:resignations') }}" class="nav-link {{ 'active' if '/resignations' in request.path }}"><i class="bi bi-door-open me-2"></i>Resignations</a>
         <a href="{{ url('payroll:list') }}" class="nav-link {{ 'active' if '/payroll' in request.path and '/my-payslips' not in request.path }}"><i class="bi bi-cash-stack me-2"></i>Payroll</a>
         {% endif %}
 
@@ -61,6 +62,7 @@
         <a href="{{ url('attendance:my') }}" class="nav-link {{ 'active' if '/attendance/me' in request.path }}"><i class="bi bi-calendar-check me-2"></i>My Attendance</a>
         <a href="{{ url('attendance:apply_leave') }}" class="nav-link {{ 'active' if '/leaves/apply' in request.path }}"><i class="bi bi-calendar-plus me-2"></i>Apply Leave</a>
         <a href="{{ url('payroll:my_payslips') }}" class="nav-link {{ 'active' if '/my-payslips' in request.path }}"><i class="bi bi-receipt me-2"></i>My Payslips</a>
+        <a href="{{ url('attendance:resignations') }}" class="nav-link {{ 'active' if '/resignations' in request.path }}"><i class="bi bi-door-open me-2"></i>My Resignations</a>
         {% if request.user.is_manager %}
         <a href="{{ url('attendance:leaves') }}" class="nav-link {{ 'active' if '/leaves' in request.path and '/apply' not in request.path }}">
           <i class="bi bi-calendar-x me-2"></i>Team Leave Requests

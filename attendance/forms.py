@@ -1,5 +1,5 @@
 from django import forms
-from .models import Attendance, LeaveRequest
+from .models import Attendance, LeaveRequest, ResignationRequest
 
 W = {'class': 'form-control'}
 
@@ -29,3 +29,16 @@ class LeaveRequestForm(forms.ModelForm):
             'reason': forms.Textarea(attrs={**W, 'rows': 3}),
         }
 
+
+class ResignationRequestForm(forms.ModelForm):
+    class Meta:
+        model = ResignationRequest
+        fields = ['requested_last_working_date', 'reason']
+        widgets = {
+            'requested_last_working_date': forms.DateInput(attrs={**W, 'type': 'date'}),
+            'reason': forms.Textarea(attrs={**W, 'rows': 4}),
+        }
+        labels = {
+            'requested_last_working_date': 'Last Working Date',
+            'reason': 'Reason for Resignation',
+        }
